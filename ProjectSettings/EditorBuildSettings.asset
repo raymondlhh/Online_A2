@@ -6,9 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/_AssetsRaymond/Scenes/GameLauncherScene.unity
-    guid: b5f898287c581b0418c33826137941b1
+    path: Assets/XMUMG1FPS/Scenes/LobbyScene.unity
+    guid: 406274ce148864e42a77567e30ef70d9
   - enabled: 1
-    path: Assets/_AssetsRaymond/Scenes/GameScene.unity
-    guid: a8fd8d5fa3ceba648ab12d7ce591c462
+    path: Assets/_AssetsRaymond/Scenes/GameScene2.unity
+    guid: 4669637aeb959a54aa589c377cade0fc
   m_configObjects: {}
