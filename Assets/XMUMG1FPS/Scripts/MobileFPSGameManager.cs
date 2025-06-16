@@ -7,7 +7,7 @@ public class MobileFPSGameManager : MonoBehaviour
 {
     [SerializeField] GameObject playerPrefab;
 
-    [SerializeField] Transform spawner;
+    [SerializeField] private Transform[] spawners;
 
 
 
@@ -16,13 +16,23 @@ public class MobileFPSGameManager : MonoBehaviour
     {
         if (PhotonNetwork.IsConnectedAndReady)
         {
-            if (spawner != null)
+            if (playerPrefab != null && spawners != null && spawners.Length > 0)
             {
-                PhotonNetwork.Instantiate(playerPrefab.name, spawner.position, Quaternion.identity);
+                // Get sorted player list
+                var players = Photon.Pun.PhotonNetwork.PlayerList;
+                System.Array.Sort(players, (a, b) => a.ActorNumber.CompareTo(b.ActorNumber));
+                int myIndex = System.Array.FindIndex(players, p => p.ActorNumber == Photon.Pun.PhotonNetwork.LocalPlayer.ActorNumber);
+
+                // Clamp index to spawner count
+                int spawnerIndex = Mathf.Clamp(myIndex, 0, spawners.Length - 1);
+
+                // Spawn at the correct spawner
+                Quaternion spawnRotation = Quaternion.Euler(0, 180, 0);
+                PhotonNetwork.Instantiate(playerPrefab.name, spawners[spawnerIndex].position, spawnRotation);
             }
             else
             {
-                Debug.Log("Place Player");
+                Debug.Log("Assign playerPrefab and spawners in the inspector.");
             }
         }
     }

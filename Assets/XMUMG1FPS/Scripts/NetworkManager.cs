@@ -29,6 +29,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     public GameObject playerListPrefab;
     public GameObject playerListContent;
     public GameObject startGameButton;
+    public GameObject loadingPanel;
 
     [Header("Room List UI Panel")]
     public GameObject RoomList_UI_Panel;
@@ -134,6 +135,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     {
         if (PhotonNetwork.IsMasterClient)
         {
+            loadingPanel.SetActive(true);
             PhotonNetwork.LoadLevel("GameScene2");
         }
     }
@@ -197,7 +199,6 @@ public class NetworkManager : MonoBehaviourPunCallbacks
                 playerListGameobject.transform.Find("PlayerIndicator").gameObject.SetActive(false);
             }
             playerListGameobjects.Add(player.ActorNumber, playerListGameobject);
-            
         }
     }
 
