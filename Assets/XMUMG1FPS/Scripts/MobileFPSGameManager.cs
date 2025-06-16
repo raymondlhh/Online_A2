@@ -6,20 +6,23 @@ using Photon.Pun;
 public class MobileFPSGameManager : MonoBehaviour
 {
     [SerializeField] GameObject playerPrefab;
-    [SerializeField] Transform spawnPoint;
+
+    [SerializeField] Transform spawner;
+
+
 
     // Start is called before the first frame update
     void Start()
     {
         if (PhotonNetwork.IsConnectedAndReady)
         {
-            if(playerPrefab != null)
+            if (spawner != null)
             {
-                PhotonNetwork.Instantiate(playerPrefab.name, spawnPoint.position, spawnPoint.rotation);
+                PhotonNetwork.Instantiate(playerPrefab.name, spawner.position, Quaternion.identity);
             }
             else
             {
-                Debug.LogWarning("PlayerPrefab or SpawnPoint not assigned.");
+                Debug.Log("Place Player");
             }
         }
     }
