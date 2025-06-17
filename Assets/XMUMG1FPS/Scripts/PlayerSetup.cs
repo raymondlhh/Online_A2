@@ -17,12 +17,12 @@ public class PlayerSetup : MonoBehaviourPunCallbacks
 
     private Animator animator;
 
-    private Shooting shooter;
+    private Shooting2 shooter;
 
     // Start is called before the first frame update
     void Start()
     {
-        shooter = GetComponent<Shooting>();
+        shooter = GetComponent<Shooting2>();
         animator = GetComponent<Animator>();   
         playerMovementController = GetComponent<PlayerMovementController>();
 

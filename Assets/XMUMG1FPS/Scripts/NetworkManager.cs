@@ -29,7 +29,6 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     public GameObject playerListPrefab;
     public GameObject playerListContent;
     public GameObject startGameButton;
-    public GameObject loadingPanel;
 
     [Header("Room List UI Panel")]
     public GameObject RoomList_UI_Panel;
@@ -38,9 +37,6 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
     [Header("Join Random Room UI Panel")]
     public GameObject JoinRandomRoom_UI_Panel;
-
-    [SerializeField] private Text roomNameText;
-    [SerializeField] private Text maxPlayersText;
 
     private Dictionary<string, RoomInfo> cachedRoomList;
     private Dictionary<string, GameObject> roomListGameobjects;
@@ -93,9 +89,9 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         }
 
         RoomOptions roomOptions = new RoomOptions();
-        roomOptions.MaxPlayers = 3;
+        roomOptions.MaxPlayers = (byte)int.Parse(maxPlayerInputField.text);
 
-        PhotonNetwork.CreateRoom(roomName, roomOptions, null);
+        PhotonNetwork.CreateRoom(roomName, roomOptions);
     }
 
     public void onCancelButtonClicked()
@@ -135,8 +131,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     {
         if (PhotonNetwork.IsMasterClient)
         {
-            loadingPanel.SetActive(true);
-            PhotonNetwork.LoadLevel("GameScene2");
+            PhotonNetwork.LoadLevel("GameScene");
         }
     }
 
@@ -173,8 +168,10 @@ public class NetworkManager : MonoBehaviourPunCallbacks
             startGameButton.SetActive(false);
         }
 
-        roomNameText.text = "Room Name: " + PhotonNetwork.CurrentRoom.Name;
-        maxPlayersText.text = "Players/Max: " + PhotonNetwork.CurrentRoom.PlayerCount + "/3";
+            roomInfoText.text = "Room name: " + PhotonNetwork.CurrentRoom.Name + " " +
+                                "Players/Max.players: " +
+                                PhotonNetwork.CurrentRoom.PlayerCount + "/" +
+                                PhotonNetwork.CurrentRoom.MaxPlayers;
         
         if(playerListGameobjects == null)
         {
@@ -199,14 +196,17 @@ public class NetworkManager : MonoBehaviourPunCallbacks
                 playerListGameobject.transform.Find("PlayerIndicator").gameObject.SetActive(false);
             }
             playerListGameobjects.Add(player.ActorNumber, playerListGameobject);
+            
         }
     }
 
     public override void OnPlayerEnteredRoom(Player newPlayer)
     {
         //update room info text
-        roomNameText.text = "Room Name: " + PhotonNetwork.CurrentRoom.Name;
-        maxPlayersText.text = "Players/Max: " + PhotonNetwork.CurrentRoom.PlayerCount + "/3";
+        roomInfoText.text = "Room name: " + PhotonNetwork.CurrentRoom.Name + " " +
+                                "Players/Max.players: " +
+                                PhotonNetwork.CurrentRoom.PlayerCount + "/" +
+                                PhotonNetwork.CurrentRoom.MaxPlayers;
 
         GameObject playerListGameobject = Instantiate(playerListPrefab);
         playerListGameobject.transform.SetParent(playerListContent.transform);
@@ -228,8 +228,10 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     public override void OnPlayerLeftRoom(Player otherPlayer)
     {
         //update room info text
-        roomNameText.text = "Room Name: " + PhotonNetwork.CurrentRoom.Name;
-        maxPlayersText.text = "Players/Max: " + PhotonNetwork.CurrentRoom.PlayerCount + "/3";
+        roomInfoText.text = "Room name: " + PhotonNetwork.CurrentRoom.Name + " " +
+                                "Players/Max.players: " +
+                                PhotonNetwork.CurrentRoom.PlayerCount + "/" +
+                                PhotonNetwork.CurrentRoom.MaxPlayers;
 
         Destroy(playerListGameobjects[otherPlayer.ActorNumber].gameObject);
         playerListGameobjects.Remove(otherPlayer.ActorNumber);
@@ -307,7 +309,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         Debug.Log(message);
         string roomName = "Room" + Random.Range(1000, 10000);
         RoomOptions roomOptions = new RoomOptions();
-        roomOptions.MaxPlayers = 3;
+        roomOptions.MaxPlayers = 20;
 
         PhotonNetwork.CreateRoom(roomName, roomOptions);
     }
