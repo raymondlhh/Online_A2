@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Photon.Pun;
 
-public class Shooting2 : MonoBehaviourPunCallbacks
+public class PlayerShoot : MonoBehaviourPunCallbacks
 {
     public Camera FPS_Camera;
     public GameObject hitEffectPrefab;
@@ -17,22 +17,17 @@ public class Shooting2 : MonoBehaviourPunCallbacks
     public bool isReloading = false;
     public Text ammoText;
 
-    [Header("Health Related Stuff")]
-    public float startHealth = 100;
-    private float health;
-    public Image healthBar;
-
     private Animator animator;
+    private PlayerHealth playerHealth;
 
     // Start is called before the first frame update
     void Start()
     {
-        health = startHealth;
-        healthBar.fillAmount = health / startHealth;
         currentAmmo = maxAmmo;
         UpdateAmmoUI();
 
         animator = GetComponent<Animator>();
+        playerHealth = GetComponent<PlayerHealth>();
     }
 
     // Update is called once per frame
@@ -104,67 +99,9 @@ public class Shooting2 : MonoBehaviourPunCallbacks
     }
 
     [PunRPC]
-    public void TakeDamage(float _damage, PhotonMessageInfo info)
-    {
-        health -= _damage;
-        Debug.Log(health);
-
-        healthBar.fillAmount = health / startHealth;
-
-        if(health <= 0f)
-        {
-            Die();
-            Debug.Log(info.Sender.NickName + " killed " + info.photonView.Owner.NickName);
-        }
-    }
-
-    [PunRPC]
     public void CreateHitEffect(Vector3 position)
     {
         GameObject hitEffectGameobject = Instantiate(hitEffectPrefab, position, Quaternion.identity);
         Destroy(hitEffectGameobject, 0.5f);
-    }
-
-    void Die()
-    {
-        if(photonView.IsMine)
-        {
-            animator.SetBool("IsDead", true);
-            StartCoroutine(Respawn());
-        }
-    }
-
-    IEnumerator Respawn()
-    {
-        GameObject reSpawnText = GameObject.Find("RespawnText");
-
-        float respawnTime = 8.0f; //8 sec
-        while(respawnTime > 0.0f)
-        {
-            yield return new WaitForSeconds(1.0f); //wait for 1 sec
-            respawnTime -= 1.0f; //decrease respawn time to 2 sec
-
-            transform.GetComponent<PlayerMovementController>().enabled = false;
-            reSpawnText.GetComponent<Text>().text = "You are killed. Respawining at: " + respawnTime.ToString(".00");
-            // will show when we are killed and show the respawn time in seconds
-        }
-
-        animator.SetBool("IsDead", false); //when respawn, we should set IsDead animation to false
-
-        reSpawnText.GetComponent<Text>().text = ""; // respawn text empty so it does not block the view
-
-        int randomPoint = Random.Range(-20, 20); //random position
-        transform.position = new Vector3(randomPoint, 0, randomPoint);
-        transform.GetComponent<PlayerMovementController>().enabled = true;
-
-        photonView.RPC("RegainHealth", RpcTarget.AllBuffered); //call this RPC from the respawned player
-        // Allbuffered = players who hoined later should have the latest update
-    }
-
-    [PunRPC]
-    public void RegainHealth() // to let other players know that this player regained health be using RPC call
-    {
-        health = startHealth;
-        healthBar.fillAmount = health / startHealth; // updated health bar
     }
 }

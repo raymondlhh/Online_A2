@@ -330,7 +330,7 @@ Transform:
   m_GameObject: {fileID: 257145559590968108}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.104, y: 1.507, z: 0.051}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -631,7 +631,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 338097239337459869}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 713250433c2d8234f8fa041e28f5ed41, type: 3}
   m_Name: 
@@ -644,8 +644,6 @@ MonoBehaviour:
   reloadTime: 2
   isReloading: 0
   ammoText: {fileID: 0}
-  startHealth: 100
-  healthBar: {fileID: 3293854786857738884}
 --- !u!1 &431297384535614595
 GameObject:
   m_ObjectHideFlags: 0
@@ -830,6 +828,7 @@ GameObject:
   - component: {fileID: 4396082622242395970}
   - component: {fileID: 8835904467468324192}
   - component: {fileID: 1864239004090494581}
+  - component: {fileID: 3437796916384169619}
   - component: {fileID: 6200101482668823066}
   - component: {fileID: 6220464359016510288}
   - component: {fileID: 3163315545540808390}
@@ -975,6 +974,20 @@ MonoBehaviour:
   - {fileID: 5340857904280667859}
   FPSCamera: {fileID: 6380093942983211797}
   playerNameText: {fileID: 8367291668666556305}
+--- !u!114 &3437796916384169619
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 489934268518803760}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53238917fc1cded4d90d779a007d1a86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  startHealth: 100
+  healthBar: {fileID: 3293854786857738884}
 --- !u!114 &6200101482668823066
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1068,7 +1081,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 489934268518803760}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 713250433c2d8234f8fa041e28f5ed41, type: 3}
   m_Name: 
@@ -1081,8 +1094,6 @@ MonoBehaviour:
   reloadTime: 2
   isReloading: 0
   ammoText: {fileID: 0}
-  startHealth: 100
-  healthBar: {fileID: 3293854786857738884}
 --- !u!1 &633327440855100468
 GameObject:
   m_ObjectHideFlags: 0
@@ -6029,7 +6040,7 @@ Transform:
   m_GameObject: {fileID: 5632712861252922387}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: -0.104, y: 1.507, z: 0.051}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:

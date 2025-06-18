@@ -18,14 +18,14 @@ public class PlayerSetup : MonoBehaviourPunCallbacks
 
     private Animator animator;
 
-    private Shooting2 shooter;
+    private PlayerShoot shooter;
 
     public TextMeshProUGUI playerNameText;
 
     // Start is called before the first frame update
     void Start()
     {
-        shooter = GetComponent<Shooting2>();
+        shooter = GetComponent<PlayerShoot>();
         animator = GetComponent<Animator>();   
         playerMovementController = GetComponent<PlayerMovementController>();
 
