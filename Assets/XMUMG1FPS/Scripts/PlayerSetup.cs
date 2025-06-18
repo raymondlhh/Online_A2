@@ -4,13 +4,14 @@ using UnityEngine;
 using Photon.Pun;
 using UnityStandardAssets.Characters.FirstPerson;
 using UnityEngine.UI;
+using TMPro;
 
 public class PlayerSetup : MonoBehaviourPunCallbacks
 {
     public GameObject[] FPS_Hands_ChildGameobjects;
     public GameObject[] Soldier_ChildGameobjects;
 
-    public GameObject playerUIPrefab;
+    // public GameObject playerUIPrefab;
     private PlayerMovementController playerMovementController;
 
     public Camera FPSCamera;
@@ -18,6 +19,8 @@ public class PlayerSetup : MonoBehaviourPunCallbacks
     private Animator animator;
 
     private Shooting2 shooter;
+
+    public TextMeshProUGUI playerNameText;
 
     // Start is called before the first frame update
     void Start()
@@ -28,46 +31,52 @@ public class PlayerSetup : MonoBehaviourPunCallbacks
 
         if(photonView.IsMine)
         {
-            // Activate soldier, deactivate FPS Hands
-            foreach (GameObject gameObject in FPS_Hands_ChildGameobjects)
-            {
-                gameObject.SetActive(true);
-            }
-            foreach (GameObject gameObject in Soldier_ChildGameobjects)
-            {
-                gameObject.SetActive(false);
-            }
+            Debug.Log("I am the local player, showing FPS hands.");
+            // Show FPS hands, hide soldier body
+            foreach (GameObject go in FPS_Hands_ChildGameobjects) go.SetActive(true);
+            foreach (GameObject go in Soldier_ChildGameobjects) go.SetActive(false);
 
             //Instantiate PlayerUI
-            GameObject playerUIGameobject = Instantiate(playerUIPrefab);
-            playerMovementController.joystick = playerUIGameobject.transform.Find("Fixed Joystick").GetComponent<Joystick>();
-            playerMovementController.fixedTouchField = playerUIGameobject.transform.Find("RotationTouchField").GetComponent<FixedTouchField>();
-
-            playerUIGameobject.transform.Find("FireButton").GetComponent<Button>().onClick.AddListener(() => shooter.Fire());
+            //GameObject playerUIGameobject = Instantiate(playerUIPrefab);
+            //playerUIGameobject.transform.Find("FireButton").GetComponent<Button>().onClick.AddListener(() => shooter.Fire());
 
             FPSCamera.enabled = true;
-            animator.SetBool("IsSoldier", false);
+            if (animator != null)
+                animator.SetBool("IsSoldier", false);
         }
         else
         {
-            // Activate soldier, deactivate FPS Hands
-            foreach (GameObject gameObject in FPS_Hands_ChildGameobjects)
-            {
-                gameObject.SetActive(false);
-            }
-            foreach (GameObject gameObject in Soldier_ChildGameobjects)
-            {
-                gameObject.SetActive(true);
-            }
+            Debug.Log("I am a remote player, showing soldier body.");
+            // Hide FPS hands, show soldier body
+            foreach (GameObject go in FPS_Hands_ChildGameobjects) go.SetActive(false);
+            foreach (GameObject go in Soldier_ChildGameobjects) go.SetActive(true);
 
             playerMovementController.enabled = false;
-            GetComponent<RigidbodyFirstPersonController>().enabled = false;
 
             FPSCamera.enabled = false;
-            animator.SetBool("IsSoldier", true);
+            if (animator != null)
+                animator.SetBool("IsSoldier", true);
         }
 
+        // Find the PlayerNameText in the hierarchy
+        if (playerNameText == null)
+        {
+            Transform nameTextTransform = transform.Find("PlayerHealthAndName/Canvas/PlayerNameText");
+            if (nameTextTransform == null)
+            {
+                Debug.LogError("PlayerNameText not found! Check the hierarchy path.");
+            }
+            else
+            {
+                playerNameText = nameTextTransform.GetComponent<TextMeshProUGUI>();
+            }
+        }
 
+        // Set the player name
+        if (playerNameText != null)
+        {
+            playerNameText.text = photonView.Owner.NickName;
+        }
     }
 
     // Update is called once per frame

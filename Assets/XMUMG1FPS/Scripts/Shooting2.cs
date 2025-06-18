@@ -9,6 +9,14 @@ public class Shooting2 : MonoBehaviourPunCallbacks
     public Camera FPS_Camera;
     public GameObject hitEffectPrefab;
 
+    [Header("Weapon Settings")]
+    public float damage = 10f;
+    public int maxAmmo = 30;
+    public int currentAmmo;
+    public float reloadTime = 2f;
+    public bool isReloading = false;
+    public Text ammoText;
+
     [Header("Health Related Stuff")]
     public float startHealth = 100;
     private float health;
@@ -21,6 +29,8 @@ public class Shooting2 : MonoBehaviourPunCallbacks
     {
         health = startHealth;
         healthBar.fillAmount = health / startHealth;
+        currentAmmo = maxAmmo;
+        UpdateAmmoUI();
 
         animator = GetComponent<Animator>();
     }
@@ -28,11 +38,35 @@ public class Shooting2 : MonoBehaviourPunCallbacks
     // Update is called once per frame
     void Update()
     {
-        
+        if (!photonView.IsMine) return;
+
+        // Handle shooting with left mouse button
+        if (Input.GetMouseButtonDown(0) && !isReloading)
+        {
+            if (currentAmmo > 0)
+            {
+                Fire();
+            }
+            else
+            {
+                StartCoroutine(Reload());
+            }
+        }
+
+        // Handle reloading with R key
+        if (Input.GetKeyDown(KeyCode.R) && !isReloading && currentAmmo < maxAmmo)
+        {
+            StartCoroutine(Reload());
+        }
     }
 
     public void Fire()
     {
+        if (currentAmmo <= 0) return;
+
+        currentAmmo--;
+        UpdateAmmoUI();
+
         RaycastHit _hit;
         Ray ray = FPS_Camera.ViewportPointToRay(new Vector3(0.5f, 0.5f));
 
@@ -44,8 +78,28 @@ public class Shooting2 : MonoBehaviourPunCallbacks
 
             if(_hit.collider.gameObject.CompareTag("Player") && !_hit.collider.gameObject.GetComponent<PhotonView>().IsMine)
             {
-                _hit.collider.gameObject.GetComponent<PhotonView>().RPC("TakeDamage", RpcTarget.AllBuffered, 10f);
+                _hit.collider.gameObject.GetComponent<PhotonView>().RPC("TakeDamage", RpcTarget.AllBuffered, damage);
             }
+        }
+    }
+
+    IEnumerator Reload()
+    {
+        isReloading = true;
+        Debug.Log("Reloading...");
+
+        yield return new WaitForSeconds(reloadTime);
+
+        currentAmmo = maxAmmo;
+        UpdateAmmoUI();
+        isReloading = false;
+    }
+
+    void UpdateAmmoUI()
+    {
+        if (ammoText != null)
+        {
+            ammoText.text = currentAmmo + " / " + maxAmmo;
         }
     }
 
@@ -106,6 +160,7 @@ public class Shooting2 : MonoBehaviourPunCallbacks
         photonView.RPC("RegainHealth", RpcTarget.AllBuffered); //call this RPC from the respawned player
         // Allbuffered = players who hoined later should have the latest update
     }
+
     [PunRPC]
     public void RegainHealth() // to let other players know that this player regained health be using RPC call
     {
