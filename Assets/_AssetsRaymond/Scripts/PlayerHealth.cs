@@ -8,7 +8,10 @@ public class PlayerHealth : MonoBehaviourPunCallbacks
 {
     [Header("Health Related Stuff")]
     public float startHealth = 100;
-    public Image healthBar;
+    
+    [Header("UI Elements")]
+    public Image TPHealthBar;    // Third person healthbar
+    public Image FPHealthBar;    // First person healthbar
 
     private float health;
     private Animator animator;
@@ -17,8 +20,7 @@ public class PlayerHealth : MonoBehaviourPunCallbacks
     void Start()
     {
         health = startHealth;
-        if (healthBar != null)
-            healthBar.fillAmount = health / startHealth;
+        UpdateHealthBars();
         animator = GetComponent<Animator>();
     }
 
@@ -28,8 +30,7 @@ public class PlayerHealth : MonoBehaviourPunCallbacks
         health -= _damage;
         Debug.Log(health);
 
-        if (healthBar != null)
-            healthBar.fillAmount = health / startHealth;
+        UpdateHealthBars();
 
         if (health <= 0f)
         {
@@ -42,8 +43,20 @@ public class PlayerHealth : MonoBehaviourPunCallbacks
     public void RegainHealth()
     {
         health = startHealth;
-        if (healthBar != null)
-            healthBar.fillAmount = health / startHealth;
+        UpdateHealthBars();
+    }
+
+    private void UpdateHealthBars()
+    {
+        float healthPercentage = health / startHealth;
+        
+        // Update Third Person healthbar
+        if (TPHealthBar != null)
+            TPHealthBar.fillAmount = healthPercentage;
+            
+        // Update First Person healthbar
+        if (FPHealthBar != null)
+            FPHealthBar.fillAmount = healthPercentage;
     }
 
     void Die()

@@ -85,18 +85,45 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
     public void OnCreateRoomButtonCliked()
     {
+        // Validate and get room name
         string roomName = roomNameInputField.text;
-
         if (string.IsNullOrEmpty(roomName))
         {
             roomName = "Room" + Random.Range(1000, 10000);
         }
 
-        RoomOptions roomOptions = new RoomOptions();
-        int maxPlayers = Mathf.Clamp(int.Parse(maxPlayerInputField.text), 1, 3);
-        roomOptions.MaxPlayers = (byte)maxPlayers;
+        // Validate and get max players
+        int maxPlayers = 3; // Default value
+        if (!string.IsNullOrEmpty(maxPlayerInputField.text))
+        {
+            int parsedValue;
+            if (int.TryParse(maxPlayerInputField.text, out parsedValue))
+            {
+                maxPlayers = Mathf.Clamp(parsedValue, 1, 3);
+            }
+        }
 
+        // Create room options
+        RoomOptions roomOptions = new RoomOptions();
+        roomOptions.MaxPlayers = (byte)maxPlayers;
+        roomOptions.IsVisible = true;
+        roomOptions.IsOpen = true;
+
+        // Create the room
+        Debug.Log($"Creating room: {roomName} with max players: {maxPlayers}");
         PhotonNetwork.CreateRoom(roomName, roomOptions);
+    }
+
+    public override void OnCreateRoomFailed(short returnCode, string message)
+    {
+        Debug.LogError($"Room creation failed: {message}");
+        // Generate a new room name and try again
+        string newRoomName = "Room" + Random.Range(1000, 10000);
+        RoomOptions roomOptions = new RoomOptions();
+        roomOptions.MaxPlayers = 3;
+        roomOptions.IsVisible = true;
+        roomOptions.IsOpen = true;
+        PhotonNetwork.CreateRoom(newRoomName, roomOptions);
     }
 
     public void onCancelButtonClicked()

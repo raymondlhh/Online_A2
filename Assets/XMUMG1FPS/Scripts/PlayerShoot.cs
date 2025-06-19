@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
+using TMPro;
 using Photon.Pun;
 using ExitGames.Client.Photon;
 
@@ -23,7 +23,7 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
     public bool isReloading = false;
     public float fireRate = 0.2f;
     private float nextFireTime = 0f;
-    public Text ammoText;
+    public TMP_Text ammoText;
 
     // Add weapon references
     [Header("Weapons - First Person")]
@@ -39,6 +39,10 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
     private int currentWeaponIndex = 0; // 0: Rifle, 1: Shotgun, 2: SMG
     private GameObject[] weaponsFP;
     private GameObject[] weaponsTP;
+    
+    // Add arrays to track ammo for each weapon
+    private int[] currentAmmoPerWeapon;
+    private int[] maxAmmoPerWeapon;
 
     private PlayerHealth playerHealth;
 
@@ -50,14 +54,64 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
     // Start is called before the first frame update
     void Start()
     {
-        currentAmmo = maxAmmo;
-        UpdateAmmoUI();
-        playerHealth = GetComponent<PlayerHealth>();
-
         // Initialize weapons array
         weaponsFP = new GameObject[] { Rifle_FP, Shotgun_FP, SMG_FP };
         weaponsTP = new GameObject[] { Rifle_TP, Shotgun_TP, SMG_TP };
+
+        // Initialize ammo arrays
+        currentAmmoPerWeapon = new int[3];
+        maxAmmoPerWeapon = new int[3];
+
+        // Set initial max ammo for each weapon from their Weapon components
+        for (int i = 0; i < weaponsFP.Length; i++)
+        {
+            if (weaponsFP[i] != null)
+            {
+                var weaponData = weaponsFP[i].GetComponent<Weapon>();
+                if (weaponData != null)
+                {
+                    maxAmmoPerWeapon[i] = weaponData.maxAmmo;
+                    currentAmmoPerWeapon[i] = weaponData.maxAmmo; // Start with full ammo
+                }
+            }
+        }
+
         SelectWeapon(currentWeaponIndex);
+        playerHealth = GetComponent<PlayerHealth>();
+
+        // Only setup and show UI elements for the local player
+        if (photonView.IsMine)
+        {
+            // Find AmmoText specifically by name in FP_PlayerUI
+            Transform fpPlayerUI = transform.Find("FP_PlayerUI");
+            if (fpPlayerUI != null)
+            {
+                // Look for a child named "AmmoText" specifically
+                Transform ammoTextTransform = fpPlayerUI.Find("AmmoText");
+                if (ammoTextTransform != null)
+                {
+                    ammoText = ammoTextTransform.GetComponent<TMP_Text>();
+                    Debug.Log("Found AmmoText: " + ammoText.name);
+                }
+                else
+                {
+                    Debug.LogError("Could not find AmmoText in FP_PlayerUI");
+                }
+            }
+            else
+            {
+                Debug.LogError("Could not find FP_PlayerUI");
+            }
+            UpdateAmmoUI();
+        }
+        else
+        {
+            // Disable ammo UI for non-local players
+            if (ammoText != null)
+            {
+                ammoText.gameObject.SetActive(false);
+            }
+        }
 
         if (photonView.IsMine)
         {
@@ -101,12 +155,12 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
         // Handle continuous shooting with left mouse button held down
         if (Input.GetMouseButton(0) && !isReloading)
         {
-            if (currentAmmo > 0 && Time.time >= nextFireTime)
+            if (currentAmmoPerWeapon[currentWeaponIndex] > 0 && Time.time >= nextFireTime)
             {
                 Fire();
                 nextFireTime = Time.time + fireRate;
             }
-            else if (currentAmmo <= 0)
+            else if (currentAmmoPerWeapon[currentWeaponIndex] <= 0)
             {
                 StartCoroutine(Reload());
             }
@@ -126,17 +180,21 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
         }
 
         // Handle reloading with R key
-        if (Input.GetKeyDown(KeyCode.R) && !isReloading && currentAmmo < maxAmmo)
+        if (Input.GetKeyDown(KeyCode.R) && !isReloading && currentAmmoPerWeapon[currentWeaponIndex] < maxAmmoPerWeapon[currentWeaponIndex])
         {
             StartCoroutine(Reload());
         }
     }
 
-    public void Fire()
+    void Fire()
     {
-        if (currentAmmo <= 0) return;
+        if (!photonView.IsMine) return;
+        if (currentAmmoPerWeapon[currentWeaponIndex] <= 0) return;
 
-        currentAmmo--;
+        // Decrease ammo
+        currentAmmoPerWeapon[currentWeaponIndex]--;
+        
+        // Update UI immediately after decreasing ammo
         UpdateAmmoUI();
 
         RaycastHit _hit;
@@ -144,14 +202,25 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
 
         if(Physics.Raycast(ray, out _hit, 100))
         {
-            // Debug.Log(_hit.collider.gameObject.name);
-
             photonView.RPC("CreateHitEffect", RpcTarget.All, _hit.point);
 
             if(_hit.collider.gameObject.CompareTag("Player") && !_hit.collider.gameObject.GetComponent<PhotonView>().IsMine)
             {
                 _hit.collider.gameObject.GetComponent<PhotonView>().RPC("TakeDamage", RpcTarget.AllBuffered, damage);
             }
+        }
+
+        // Sync ammo across network
+        photonView.RPC("SyncAmmo", RpcTarget.All, currentWeaponIndex, currentAmmoPerWeapon[currentWeaponIndex]);
+    }
+
+    [PunRPC]
+    void SyncAmmo(int weaponIndex, int newAmmo)
+    {
+        currentAmmoPerWeapon[weaponIndex] = newAmmo;
+        if (photonView.IsMine)
+        {
+            UpdateAmmoUI();
         }
     }
 
@@ -177,12 +246,9 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
         Debug.Log("Reloading...");
         yield return new WaitForSeconds(reloadTime);
 
-        currentAmmo = maxAmmo;
+        currentAmmoPerWeapon[currentWeaponIndex] = maxAmmoPerWeapon[currentWeaponIndex];
         UpdateAmmoUI();
         isReloading = false;
-
-        if (FPAnimator != null)
-            FPAnimator.SetBool("IsReloading", false);
 
         // Fix: Access PlayerMovementController's animator via reflection, as in reload start
         if (movement != null)
@@ -206,9 +272,12 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
 
     void UpdateAmmoUI()
     {
+        // Only update UI for local player
+        if (!photonView.IsMine) return;
+
         if (ammoText != null)
         {
-            ammoText.text = currentAmmo + " / " + maxAmmo;
+            ammoText.text = $"{currentAmmoPerWeapon[currentWeaponIndex]} / {maxAmmoPerWeapon[currentWeaponIndex]}";
         }
     }
 
@@ -297,7 +366,7 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
         }
     }
 
-    // Modify ApplyWeaponVisual to not instantly switch weapons
+    // Modify ApplyWeaponVisual to update weapon stats but keep ammo separate
     void ApplyWeaponVisual(int index)
     {
         // Always update visuals for the local player after switching
@@ -312,14 +381,14 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
         // Update weapon data
         if (weaponsFP[index] != null)
         {
-            var currentWeaponData = weaponsFP[index].GetComponent<Weapon>();
-            if (currentWeaponData != null)
+            var weaponData = weaponsFP[index].GetComponent<Weapon>();
+            if (weaponData != null)
             {
-                fireRate = currentWeaponData.fireRate;
-                damage = currentWeaponData.damage;
-                maxAmmo = currentWeaponData.maxAmmo;
+                fireRate = weaponData.fireRate;
+                damage = weaponData.damage;
+                // Don't update maxAmmo here anymore since we track it per weapon
                 UpdateAmmoUI();
-                Debug.Log($"Switched weapon: fireRate={fireRate}, damage={damage}, maxAmmo={maxAmmo}");
+                Debug.Log($"Switched weapon: fireRate={fireRate}, damage={damage}, currentAmmo={currentAmmoPerWeapon[index]}/{maxAmmoPerWeapon[index]}");
             }
         }
     }
