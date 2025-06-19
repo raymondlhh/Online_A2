@@ -91,7 +91,7 @@ Shader "SyntyStudios_Parallax_Full"
 		
 
 		HLSLINCLUDE
-		#pragma target 3.5
+		#pragma target 5.0
 		#pragma prefer_hlslcc gles
 		// ensure rendering platforms toggle list is visible
 

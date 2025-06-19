@@ -46,6 +46,9 @@ public class UIManager : MonoBehaviourPunCallbacks
 
         // Find and assign the local player's appearance controller
         StartCoroutine(FindLocalAppearanceController());
+
+        // Pause the game until all players have chosen
+        PauseGameplay();
     }
 
     IEnumerator FindLocalAppearanceController()
@@ -163,6 +166,8 @@ public class UIManager : MonoBehaviourPunCallbacks
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
             countdownStarted = false;
+            // Pause the game if not all have chosen
+            PauseGameplay();
         }
     }
 
@@ -181,8 +186,30 @@ public class UIManager : MonoBehaviourPunCallbacks
         }
         countdownObject.SetActive(false);
         choosePlayerPanel.SetActive(false);
-        Time.timeScale = 1f;
+        ResumeGameplay();
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+    }
+
+    void PauseGameplay()
+    {
+        var localPlayerMovement = FindObjectsOfType<PlayerMovementController>().FirstOrDefault(p => p.GetComponent<Photon.Pun.PhotonView>()?.IsMine == true);
+        if (localPlayerMovement != null)
+            localPlayerMovement.enabled = false;
+
+        var localPlayerShoot = FindObjectsOfType<PlayerShoot>().FirstOrDefault(s => s.GetComponent<Photon.Pun.PhotonView>()?.IsMine == true);
+        if (localPlayerShoot != null)
+            localPlayerShoot.enabled = false;
+    }
+
+    void ResumeGameplay()
+    {
+        var localPlayerMovement = FindObjectsOfType<PlayerMovementController>().FirstOrDefault(p => p.GetComponent<Photon.Pun.PhotonView>()?.IsMine == true);
+        if (localPlayerMovement != null)
+            localPlayerMovement.enabled = true;
+
+        var localPlayerShoot = FindObjectsOfType<PlayerShoot>().FirstOrDefault(s => s.GetComponent<Photon.Pun.PhotonView>()?.IsMine == true);
+        if (localPlayerShoot != null)
+            localPlayerShoot.enabled = true;
     }
 }

@@ -22,13 +22,14 @@ public class PlayerMovementController : MonoBehaviour
     public Camera playerCamera;
     private bool isCursorLocked = true;
 
-    private Animator animator;
+    [Header("Animation Settings")]
+    public Animator FPAnimator;  // First Person Animator
+    public Animator TPAnimator;  // Third Person Animator
 
     // Start is called before the first frame update
     void Start()
     {
         rb = GetComponent<Rigidbody>();
-        animator = GetComponent<Animator>();
         currentSpeed = walkSpeed;
 
         // Lock and hide cursor
@@ -44,7 +45,6 @@ public class PlayerMovementController : MonoBehaviour
                 Debug.LogError("No camera found! Please assign a camera to the player.");
             }
         }
-
     }
 
     // Update is called once per frame
@@ -85,22 +85,34 @@ public class PlayerMovementController : MonoBehaviour
         moveDirection = transform.right * horizontalInput + transform.forward * verticalInput;
         moveDirection = moveDirection.normalized;
 
-        // Update animator for hands (first-person)
-        animator.SetFloat("Horizontal", horizontalInput);
-        animator.SetFloat("Vertical", verticalInput);
-        animator.SetBool("IsRunning", isRunning);
+        // Update both FP and TP animators
+        UpdateAnimators();
 
         // Handle jumping
         if (Input.GetKeyDown(KeyCode.Space))
         {
             rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
         }
-    }
 
-    void FixedUpdate()
-    {
         // Apply movement
         Vector3 movement = moveDirection * currentSpeed;
         rb.velocity = new Vector3(movement.x, rb.velocity.y, movement.z);
+    }
+
+    private void UpdateAnimators()
+    {
+        // Update First Person Animator
+        if (FPAnimator != null)
+        {
+            // No longer setting IsRunning for FPAnimator
+        }
+
+        // Update Third Person Animator
+        if (TPAnimator != null)
+        {
+            TPAnimator.SetFloat("Horizontal", horizontalInput);
+            TPAnimator.SetFloat("Vertical", verticalInput);
+            TPAnimator.SetBool("IsRunning", isRunning);
+        }
     }
 }
