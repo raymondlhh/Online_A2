@@ -189,6 +189,11 @@ public class UIManager : MonoBehaviourPunCallbacks
         ResumeGameplay();
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.StartGameTimer();
+        }
     }
 
     void PauseGameplay()

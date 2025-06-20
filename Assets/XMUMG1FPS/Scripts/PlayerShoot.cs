@@ -36,6 +36,15 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
     public GameObject Shotgun_TP;
     public GameObject SMG_TP;
 
+    [Header("Weapons - Sword")]
+    public GameObject Sword_FP;
+    public GameObject Sword_TP;
+
+    [Header("Sword Settings")]
+    public float swordDamage = 50f;
+    public float swordAttackRange = 3f;
+    public float swordAttackRate = 1f;
+
     private int currentWeaponIndex = 0; // 0: Rifle, 1: Shotgun, 2: SMG
     private GameObject[] weaponsFP;
     private GameObject[] weaponsTP;
@@ -50,6 +59,11 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
 
     private bool isChanging = false;  // Add this field
     public float weaponSwitchTime = 0.5f;  // Add this to control switch animation duration
+
+    private bool isSwordActive = false;
+    private float nextSwordAttackTime = 0f;
+    private Coroutine swordActivationCoroutine;
+    private Coroutine reloadCoroutine;
 
     // Start is called before the first frame update
     void Start()
@@ -136,53 +150,64 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
     {
         if (!photonView.IsMine) return;
 
-        // Weapon switching by key
-        if (Input.GetKeyDown(KeyCode.Alpha1)) { SetWeaponIndex(0); }
-        if (Input.GetKeyDown(KeyCode.Alpha2)) { SetWeaponIndex(1); }
-        if (Input.GetKeyDown(KeyCode.Alpha3)) { SetWeaponIndex(2); }
-
-        // Mouse wheel switching
-        float scroll = Input.GetAxis("Mouse ScrollWheel");
-        if (scroll > 0f)
+        if (isSwordActive)
         {
-            SetWeaponIndex((currentWeaponIndex + 2) % 3); // previous
-        }
-        else if (scroll < 0f)
-        {
-            SetWeaponIndex((currentWeaponIndex + 1) % 3); // next
-        }
-
-        // Handle continuous shooting with left mouse button held down
-        if (Input.GetMouseButton(0) && !isReloading)
-        {
-            if (currentAmmoPerWeapon[currentWeaponIndex] > 0 && Time.time >= nextFireTime)
+            if (Input.GetMouseButtonDown(0) && Time.time >= nextSwordAttackTime)
             {
-                Fire();
-                nextFireTime = Time.time + fireRate;
-            }
-            else if (currentAmmoPerWeapon[currentWeaponIndex] <= 0)
-            {
-                StartCoroutine(Reload());
-            }
-            // Set IsGunAttacking on TPAnimator while button is held
-            if (TPAnimator != null)
-            {
-                TPAnimator.SetBool("IsGunAttacking", true);
+                SwordAttack();
+                nextSwordAttackTime = Time.time + swordAttackRate;
             }
         }
         else
         {
-            // Set IsGunAttacking to false when button is released
-            if (TPAnimator != null)
-            {
-                TPAnimator.SetBool("IsGunAttacking", false);
-            }
-        }
+            // Weapon switching by key
+            if (Input.GetKeyDown(KeyCode.Alpha1)) { SetWeaponIndex(0); }
+            if (Input.GetKeyDown(KeyCode.Alpha2)) { SetWeaponIndex(1); }
+            if (Input.GetKeyDown(KeyCode.Alpha3)) { SetWeaponIndex(2); }
 
-        // Handle reloading with R key
-        if (Input.GetKeyDown(KeyCode.R) && !isReloading && currentAmmoPerWeapon[currentWeaponIndex] < maxAmmoPerWeapon[currentWeaponIndex])
-        {
-            StartCoroutine(Reload());
+            // Mouse wheel switching
+            float scroll = Input.GetAxis("Mouse ScrollWheel");
+            if (scroll > 0f)
+            {
+                SetWeaponIndex((currentWeaponIndex + 2) % 3); // previous
+            }
+            else if (scroll < 0f)
+            {
+                SetWeaponIndex((currentWeaponIndex + 1) % 3); // next
+            }
+
+            // Handle continuous shooting with left mouse button held down
+            if (Input.GetMouseButton(0) && !isReloading)
+            {
+                if (currentAmmoPerWeapon[currentWeaponIndex] > 0 && Time.time >= nextFireTime)
+                {
+                    Fire();
+                    nextFireTime = Time.time + fireRate;
+                }
+                else if (currentAmmoPerWeapon[currentWeaponIndex] <= 0)
+                {
+                    StartCoroutine(Reload());
+                }
+                // Set IsGunAttacking on TPAnimator while button is held
+                if (TPAnimator != null)
+                {
+                    TPAnimator.SetBool("IsGunAttacking", true);
+                }
+            }
+            else
+            {
+                // Set IsGunAttacking to false when button is released
+                if (TPAnimator != null)
+                {
+                    TPAnimator.SetBool("IsGunAttacking", false);
+                }
+            }
+
+            // Handle reloading with R key
+            if (Input.GetKeyDown(KeyCode.R) && !isReloading && currentAmmoPerWeapon[currentWeaponIndex] < maxAmmoPerWeapon[currentWeaponIndex])
+            {
+                reloadCoroutine = StartCoroutine(Reload());
+            }
         }
     }
 
@@ -212,6 +237,42 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
 
         // Sync ammo across network
         photonView.RPC("SyncAmmo", RpcTarget.All, currentWeaponIndex, currentAmmoPerWeapon[currentWeaponIndex]);
+
+        if (photonView.IsMine)
+        {
+            UpdateAmmoUI();
+        }
+    }
+
+    void SwordAttack()
+    {
+        if (!photonView.IsMine) return;
+
+        StartCoroutine(PerformSwordAttack());
+    }
+
+    IEnumerator PerformSwordAttack()
+    {
+        if (FPAnimator != null) FPAnimator.SetBool("IsAttacking", true);
+        if (TPAnimator != null) TPAnimator.SetBool("IsSwordAttacking", true);
+
+        RaycastHit _hit;
+        Ray ray = FPS_Camera.ViewportPointToRay(new Vector3(0.5f, 0.5f));
+
+        if(Physics.Raycast(ray, out _hit, swordAttackRange))
+        {
+            photonView.RPC("CreateHitEffect", RpcTarget.All, _hit.point);
+
+            if(_hit.collider.gameObject.CompareTag("Player") && !_hit.collider.gameObject.GetComponent<PhotonView>().IsMine)
+            {
+                _hit.collider.gameObject.GetComponent<PhotonView>().RPC("TakeDamage", RpcTarget.AllBuffered, swordDamage);
+            }
+        }
+        
+        yield return new WaitForSeconds(swordAttackRate * 0.9f); 
+
+        if (FPAnimator != null) FPAnimator.SetBool("IsAttacking", false);
+        if (TPAnimator != null) TPAnimator.SetBool("IsSwordAttacking", false);
     }
 
     [PunRPC]
@@ -230,17 +291,18 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
         if (FPAnimator != null)
             FPAnimator.SetBool("IsReloading", true);
 
-        // If you want to sync to PlayerMovementController's animator too:
-        var movement = GetComponent<PlayerMovementController>();
-        if (movement != null)
+        // De-activate sword if it's active
+        if (isSwordActive)
         {
-            var movementAnimatorField = typeof(PlayerMovementController).GetField("animator", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
-            if (movementAnimatorField != null)
+            if (swordActivationCoroutine != null)
             {
-                var movementAnimator = movementAnimatorField.GetValue(movement) as Animator;
-                if (movementAnimator != null)
-                    movementAnimator.SetBool("IsReloading", true);
+                StopCoroutine(swordActivationCoroutine);
+                swordActivationCoroutine = null;
             }
+            // We call SyncSwordState directly instead of through an RPC
+            // if we are sure this is only ever called on the local client.
+            // Using an RPC is safer for maintaining state consistency.
+            photonView.RPC("SyncSwordState", RpcTarget.All, false);
         }
 
         Debug.Log("Reloading...");
@@ -250,24 +312,10 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
         UpdateAmmoUI();
         isReloading = false;
 
-        // Fix: Access PlayerMovementController's animator via reflection, as in reload start
-        if (movement != null)
-        {
-            var movementAnimatorField = typeof(PlayerMovementController).GetField("animator", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
-            if (movementAnimatorField != null)
-            {
-                var movementAnimator = movementAnimatorField.GetValue(movement) as Animator;
-                if (movementAnimator != null)
-                    movementAnimator.SetBool("IsReloading", false);
-            }
-        }
-
-        if (photonView.IsMine)
-        {
-            ExitGames.Client.Photon.Hashtable props = new ExitGames.Client.Photon.Hashtable();
-            props["WeaponIndex"] = currentWeaponIndex;
-            PhotonNetwork.LocalPlayer.SetCustomProperties(props);
-        }
+        if (FPAnimator != null)
+            FPAnimator.SetBool("IsReloading", false);
+        
+        reloadCoroutine = null;
     }
 
     void UpdateAmmoUI()
@@ -323,6 +371,16 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
         {
             Debug.Log($"Cannot switch weapon - already changing weapons");
             return;
+        }
+
+        if (isSwordActive)
+        {
+            if (swordActivationCoroutine != null)
+            {
+                StopCoroutine(swordActivationCoroutine);
+                swordActivationCoroutine = null;
+            }
+            photonView.RPC("SyncSwordState", RpcTarget.All, false);
         }
 
         Debug.Log($"Starting weapon switch to index: {index}");
@@ -390,6 +448,55 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
                 UpdateAmmoUI();
                 Debug.Log($"Switched weapon: fireRate={fireRate}, damage={damage}, currentAmmo={currentAmmoPerWeapon[index]}/{maxAmmoPerWeapon[index]}");
             }
+        }
+    }
+
+    public void ActivateSword(float duration)
+    {
+        if (reloadCoroutine != null)
+        {
+            StopCoroutine(reloadCoroutine);
+            isReloading = false;
+            if (FPAnimator != null) FPAnimator.SetBool("IsReloading", false);
+            reloadCoroutine = null;
+        }
+
+        if (swordActivationCoroutine != null)
+        {
+            StopCoroutine(swordActivationCoroutine);
+        }
+        swordActivationCoroutine = StartCoroutine(SwordActivationCoroutine(duration));
+    }
+
+    IEnumerator SwordActivationCoroutine(float duration)
+    {
+        photonView.RPC("SyncSwordState", RpcTarget.All, true);
+        yield return new WaitForSeconds(duration);
+        photonView.RPC("SyncSwordState", RpcTarget.All, false);
+        swordActivationCoroutine = null;
+    }
+
+    [PunRPC]
+    void SyncSwordState(bool swordState)
+    {
+        isSwordActive = swordState;
+
+        if (Sword_FP != null) Sword_FP.SetActive(isSwordActive);
+        if (Sword_TP != null) Sword_TP.SetActive(isSwordActive);
+
+        if (FPAnimator != null) FPAnimator.SetBool("IsSword", isSwordActive);
+
+        if (isSwordActive)
+        {
+            for (int i = 0; i < weaponsFP.Length; i++)
+            {
+                if (weaponsFP[i] != null) weaponsFP[i].SetActive(false);
+                if (weaponsTP[i] != null) weaponsTP[i].SetActive(false);
+            }
+        }
+        else
+        {
+            ApplyWeaponVisual(currentWeaponIndex);
         }
     }
 }

@@ -15,6 +15,14 @@ public class PlayerMovementController : MonoBehaviour
     private Rigidbody rb;
     private bool isRunning = false;
 
+    [Header("Ground Check Settings")]
+    public Transform groundCheck;
+    public float groundCheckDistance = 0.2f;
+    private bool isGrounded;
+    private bool canMultiJump = false;
+    private bool isSlowFalling = false;
+    private Coroutine slowFallCoroutine;
+
     [Header("Mouse Look Settings")]
     public float mouseSensitivity = 2f;
     public float maxLookAngle = 90f;
@@ -50,6 +58,13 @@ public class PlayerMovementController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        // Ground Check
+        if (groundCheck != null)
+        {
+            // Casts a ray straight down from the groundCheck position.
+            isGrounded = Physics.Raycast(groundCheck.position, Vector3.down, groundCheckDistance);
+        }
+
         // Handle cursor lock toggle
         if (Input.GetKeyDown(KeyCode.Escape))
         {
@@ -89,7 +104,7 @@ public class PlayerMovementController : MonoBehaviour
         UpdateAnimators();
 
         // Handle jumping
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (Input.GetKeyDown(KeyCode.Space) && (isGrounded || canMultiJump))
         {
             rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
         }
@@ -97,6 +112,12 @@ public class PlayerMovementController : MonoBehaviour
         // Apply movement
         Vector3 movement = moveDirection * currentSpeed;
         rb.velocity = new Vector3(movement.x, rb.velocity.y, movement.z);
+
+        if (isSlowFalling)
+        {
+            // Override y-velocity to counteract gravity
+            rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
+        }
     }
 
     private void UpdateAnimators()
@@ -114,5 +135,42 @@ public class PlayerMovementController : MonoBehaviour
             TPAnimator.SetFloat("Vertical", verticalInput);
             TPAnimator.SetBool("IsRunning", isRunning);
         }
+    }
+
+    public void ActivateHighJump(float duration)
+    {
+        StartCoroutine(HighJumpCoroutine(duration));
+    }
+
+    private IEnumerator HighJumpCoroutine(float duration)
+    {
+        canMultiJump = true;
+        yield return new WaitForSeconds(duration);
+        canMultiJump = false;
+    }
+
+    public void ActivateSlowFall(float duration)
+    {
+        if (slowFallCoroutine != null) StopCoroutine(slowFallCoroutine);
+        slowFallCoroutine = StartCoroutine(SlowFallCoroutine(duration));
+    }
+
+    public void DeactivateSlowFall()
+    {
+        if (slowFallCoroutine != null)
+        {
+            StopCoroutine(slowFallCoroutine);
+            slowFallCoroutine = null;
+        }
+        isSlowFalling = false;
+        rb.useGravity = true; // Re-enable gravity
+    }
+
+    private IEnumerator SlowFallCoroutine(float duration)
+    {
+        isSlowFalling = true;
+        rb.useGravity = false;
+        yield return new WaitForSeconds(duration);
+        DeactivateSlowFall();
     }
 }

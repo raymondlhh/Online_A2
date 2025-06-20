@@ -16,6 +16,7 @@ public class PlayerHealth : MonoBehaviourPunCallbacks
     private float health;
     private Animator animator;
     private bool isLocalPlayer;
+    private bool isInvulnerable = false;
 
     void Awake()
     {
@@ -42,6 +43,12 @@ public class PlayerHealth : MonoBehaviourPunCallbacks
     [PunRPC]
     public void TakeDamage(float _damage, PhotonMessageInfo info)
     {
+        if (isInvulnerable)
+        {
+            Debug.Log($"Player {photonView.Owner.NickName} is invulnerable and took no damage.");
+            return;
+        }
+
         health -= _damage;
         health = Mathf.Max(0, health); // Prevent negative health
         Debug.Log($"Player {photonView.Owner.NickName} took damage. Health: {health}");
@@ -86,6 +93,28 @@ public class PlayerHealth : MonoBehaviourPunCallbacks
             FPHealthBar.fillAmount = healthPercentage;
             Debug.Log($"Updating FP healthbar: {healthPercentage}");
         }
+    }
+
+    public void ActivateBloodLock(float duration)
+    {
+        if (photonView.IsMine)
+        {
+            StartCoroutine(BloodLockCoroutine(duration));
+        }
+    }
+
+    private IEnumerator BloodLockCoroutine(float duration)
+    {
+        photonView.RPC("SetInvulnerable", RpcTarget.All, true);
+        yield return new WaitForSeconds(duration);
+        photonView.RPC("SetInvulnerable", RpcTarget.All, false);
+    }
+
+    [PunRPC]
+    private void SetInvulnerable(bool state)
+    {
+        isInvulnerable = state;
+        Debug.Log($"Player {photonView.Owner.NickName} invulnerability set to: {state}");
     }
 
     void Die()

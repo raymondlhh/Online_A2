@@ -47,6 +47,10 @@ MonoBehaviour:
   - RPC_ChangeAppearance
   - SyncAmmo
   - SyncHealth
+  - SyncSwordState
+  - SetInvulnerable
+  - SyncVisibility
+  - TeleportRPC
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1
