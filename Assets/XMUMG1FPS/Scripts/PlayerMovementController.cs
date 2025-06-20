@@ -4,6 +4,9 @@ using UnityEngine;
 
 public class PlayerMovementController : MonoBehaviour
 {
+    public bool CanMove { get; set; } = true;
+    public bool CanLook { get; set; } = true;
+
     [Header("Movement Settings")]
     public float walkSpeed = 3f;
     public float runSpeed = 5f;
@@ -73,7 +76,7 @@ public class PlayerMovementController : MonoBehaviour
             Cursor.visible = !isCursorLocked;
         }
 
-        if (isCursorLocked)
+        if (isCursorLocked && CanLook)
         {
             // Get mouse input
             float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
@@ -88,30 +91,38 @@ public class PlayerMovementController : MonoBehaviour
             playerCamera.transform.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
         }
 
-        // Get movement input
-        horizontalInput = Input.GetAxis("Horizontal");
-        verticalInput = Input.GetAxis("Vertical");
-
-        // Handle running with shift key
-        isRunning = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
-        currentSpeed = isRunning ? runSpeed : walkSpeed;
-
-        // Calculate movement direction
-        moveDirection = transform.right * horizontalInput + transform.forward * verticalInput;
-        moveDirection = moveDirection.normalized;
-
-        // Update both FP and TP animators
-        UpdateAnimators();
-
-        // Handle jumping
-        if (Input.GetKeyDown(KeyCode.Space) && (isGrounded || canMultiJump))
+        if (CanMove)
         {
-            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
-        }
+            // Get movement input
+            horizontalInput = Input.GetAxis("Horizontal");
+            verticalInput = Input.GetAxis("Vertical");
 
-        // Apply movement
-        Vector3 movement = moveDirection * currentSpeed;
-        rb.velocity = new Vector3(movement.x, rb.velocity.y, movement.z);
+            // Handle running with shift key
+            isRunning = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            currentSpeed = isRunning ? runSpeed : walkSpeed;
+
+            // Calculate movement direction
+            moveDirection = transform.right * horizontalInput + transform.forward * verticalInput;
+            moveDirection = moveDirection.normalized;
+
+            // Update both FP and TP animators
+            UpdateAnimators();
+
+            // Handle jumping
+            if (Input.GetKeyDown(KeyCode.Space) && (isGrounded || canMultiJump))
+            {
+                rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            }
+
+            // Apply movement
+            Vector3 movement = moveDirection * currentSpeed;
+            rb.velocity = new Vector3(movement.x, rb.velocity.y, movement.z);
+        }
+        else
+        {
+            // Ensure no movement is applied
+            rb.velocity = new Vector3(0, rb.velocity.y, 0);
+        }
 
         if (isSlowFalling)
         {

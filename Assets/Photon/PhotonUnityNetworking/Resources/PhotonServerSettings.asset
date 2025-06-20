@@ -51,6 +51,12 @@ MonoBehaviour:
   - SetInvulnerable
   - SyncVisibility
   - TeleportRPC
+  - GetConnected
+  - RegainHealthRPC
+  - Revive
+  - CheckForGameOver
+  - TriggerGameOver
+  - GoDown
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

@@ -193,6 +193,7 @@ public class UIManager : MonoBehaviourPunCallbacks
         if (GameManager.Instance != null)
         {
             GameManager.Instance.StartGameTimer();
+            GameManager.Instance.HideSpawners();
         }
     }
 

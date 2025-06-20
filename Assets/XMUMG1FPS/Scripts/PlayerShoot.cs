@@ -65,8 +65,7 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
     private Coroutine swordActivationCoroutine;
     private Coroutine reloadCoroutine;
 
-    // Start is called before the first frame update
-    void Start()
+    void Awake()
     {
         // Initialize weapons array
         weaponsFP = new GameObject[] { Rifle_FP, Shotgun_FP, SMG_FP };
@@ -75,7 +74,11 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
         // Initialize ammo arrays
         currentAmmoPerWeapon = new int[3];
         maxAmmoPerWeapon = new int[3];
+    }
 
+    // Start is called before the first frame update
+    void Start()
+    {
         // Set initial max ammo for each weapon from their Weapon components
         for (int i = 0; i < weaponsFP.Length; i++)
         {
@@ -229,10 +232,10 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
         {
             photonView.RPC("CreateHitEffect", RpcTarget.All, _hit.point);
 
-            if(_hit.collider.gameObject.CompareTag("Player") && !_hit.collider.gameObject.GetComponent<PhotonView>().IsMine)
-            {
-                _hit.collider.gameObject.GetComponent<PhotonView>().RPC("TakeDamage", RpcTarget.AllBuffered, damage);
-            }
+            // if(_hit.collider.gameObject.CompareTag("Player") && !_hit.collider.gameObject.GetComponent<PhotonView>().IsMine)
+            // {
+            //     _hit.collider.gameObject.GetComponent<PhotonView>().RPC("TakeDamage", RpcTarget.AllBuffered, damage);
+            // }
         }
 
         // Sync ammo across network
@@ -263,10 +266,10 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
         {
             photonView.RPC("CreateHitEffect", RpcTarget.All, _hit.point);
 
-            if(_hit.collider.gameObject.CompareTag("Player") && !_hit.collider.gameObject.GetComponent<PhotonView>().IsMine)
-            {
-                _hit.collider.gameObject.GetComponent<PhotonView>().RPC("TakeDamage", RpcTarget.AllBuffered, swordDamage);
-            }
+            // if(_hit.collider.gameObject.CompareTag("Player") && !_hit.collider.gameObject.GetComponent<PhotonView>().IsMine)
+            // {
+            //     _hit.collider.gameObject.GetComponent<PhotonView>().RPC("TakeDamage", RpcTarget.AllBuffered, swordDamage);
+            // }
         }
         
         yield return new WaitForSeconds(swordAttackRate * 0.9f); 

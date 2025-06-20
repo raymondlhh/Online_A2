@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using Photon.Pun;
+using ExitGames.Client.Photon;
 
 public class PlayerHealth : MonoBehaviourPunCallbacks
 {
@@ -12,11 +13,19 @@ public class PlayerHealth : MonoBehaviourPunCallbacks
     [Header("UI Elements")]
     [SerializeField] private Image TPHealthBar;    // Third person healthbar
     [SerializeField] private Image FPHealthBar;    // First person healthbar
+    [SerializeField] private GameObject deadPanel;
+    [SerializeField] private GameObject gameOverPanel;
 
     private float health;
     private Animator animator;
     private bool isLocalPlayer;
     private bool isInvulnerable = false;
+    public bool IsDowned { get; private set; } = false;
+
+    // Component references
+    private PlayerMovementController movementController;
+    private PlayerShoot playerShoot;
+    private PlayerSkillDetails[] skillDetails;
 
     void Awake()
     {
@@ -37,6 +46,9 @@ public class PlayerHealth : MonoBehaviourPunCallbacks
     {
         health = startHealth;
         animator = GetComponent<Animator>();
+        movementController = GetComponent<PlayerMovementController>();
+        playerShoot = GetComponent<PlayerShoot>();
+        skillDetails = GetComponentsInChildren<PlayerSkillDetails>();
         UpdateHealthBars();
     }
 
@@ -69,8 +81,13 @@ public class PlayerHealth : MonoBehaviourPunCallbacks
         UpdateHealthBars();
     }
 
-    [PunRPC]
     public void RegainHealth()
+    {
+        photonView.RPC("RegainHealthRPC", RpcTarget.All);
+    }
+
+    [PunRPC]
+    public void RegainHealthRPC()
     {
         health = startHealth;
         UpdateHealthBars();
@@ -117,51 +134,174 @@ public class PlayerHealth : MonoBehaviourPunCallbacks
         Debug.Log($"Player {photonView.Owner.NickName} invulnerability set to: {state}");
     }
 
+    [PunRPC]
+    public void Revive()
+    {
+        IsDowned = false;
+        if (isLocalPlayer)
+        {
+            if (deadPanel != null) deadPanel.SetActive(false);
+            
+            movementController.CanMove = true;
+            movementController.CanLook = true;
+            playerShoot.enabled = true;
+            foreach (var skill in skillDetails)
+            {
+                skill.enabled = true;
+            }
+        }
+        RegainHealth();
+    }
+
     void Die()
     {
         if (isLocalPlayer)
         {
-            if (animator != null)
-                animator.SetBool("IsDead", true);
-            StartCoroutine(Respawn());
+            // Tell all clients that this player is now in the downed state.
+            photonView.RPC("GoDown", RpcTarget.All);
         }
     }
 
-    IEnumerator Respawn()
+    [PunRPC]
+    private void GoDown()
     {
-        GameObject reSpawnText = GameObject.Find("RespawnText");
+        IsDowned = true;
 
-        float respawnTime = 8.0f;
-        while (respawnTime > 0.0f)
+        if (isLocalPlayer)
         {
-            yield return new WaitForSeconds(1.0f);
-            respawnTime -= 1.0f;
-
-            var movement = GetComponent<PlayerMovementController>();
-            if (movement != null) movement.enabled = false;
-
-            if (reSpawnText != null)
-                reSpawnText.GetComponent<Text>().text = "You are killed. Respawning at: " + respawnTime.ToString(".00");
+            if (animator != null)
+                animator.SetBool("IsDead", true);
+            
+            // This player is the one who died. Run the local "downed" sequence.
+            StartCoroutine(EnterDownedState());
         }
 
-        if (animator != null)
-            animator.SetBool("IsDead", false);
+        // After the state is updated, the Master Client checks if the game is over.
+        if (PhotonNetwork.IsMasterClient)
+        {
+            CheckForGameOver();
+        }
+    }
 
-        if (reSpawnText != null)
-            reSpawnText.GetComponent<Text>().text = "";
+    private void CheckForGameOver()
+    {
+        // This check only runs on the Master Client for authority.
+        if (!PhotonNetwork.IsMasterClient) return;
 
-        int randomPoint = Random.Range(-20, 20);
-        transform.position = new Vector3(randomPoint, 0, randomPoint);
+        PlayerHealth[] allPlayers = FindObjectsOfType<PlayerHealth>();
 
-        var movement2 = GetComponent<PlayerMovementController>();
-        if (movement2 != null) movement2.enabled = true;
+        // If a player is still loading in, the game isn't over.
+        if (allPlayers.Length < PhotonNetwork.CurrentRoom.PlayerCount)
+        {
+            return;
+        }
 
-        RegainHealth();
+        foreach (var player in allPlayers)
+        {
+            // If we find even one player who isn't downed, the game continues.
+            if (!player.IsDowned)
+            {
+                return;
+            }
+        }
+
+        // If the loop completes, all players are downed. Game Over.
+        // Use a room property to signal game over to all clients.
+        ExitGames.Client.Photon.Hashtable props = new ExitGames.Client.Photon.Hashtable();
+        props["GameOver"] = true;
+        PhotonNetwork.CurrentRoom.SetCustomProperties(props);
+    }
+
+    public override void OnRoomPropertiesUpdate(ExitGames.Client.Photon.Hashtable propertiesThatChanged)
+    {
+        if (propertiesThatChanged.ContainsKey("GameOver"))
+        {
+            if (isLocalPlayer)
+            {
+                TriggerGameOver();
+            }
+        }
+    }
+
+    private void TriggerGameOver()
+    {
+        // This is called on the local client to show their own Game Over screen.
+        if (gameOverPanel != null)
+        {
+            gameOverPanel.SetActive(true);
+        }
+        
+        // Also hide the dead panel if it's active
+        if (deadPanel != null)
+        {
+            deadPanel.SetActive(false);
+        }
+
+        // Deactivate the revive area associated with this player
+        if (photonView.IsMine)
+        {
+            GameObject reviveArea = GameManager.Instance.reviveAreas[photonView.Owner.ActorNumber - 1];
+            if (reviveArea != null)
+            {
+                reviveArea.SetActive(false);
+            }
+        }
+
+        // Unlock cursor
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+    }
+
+    IEnumerator EnterDownedState()
+    {
+        // 1. Disable controls
+        movementController.CanMove = false;
+        movementController.CanLook = false;
+        playerShoot.enabled = false;
+        foreach(var skill in skillDetails)
+        {
+            skill.enabled = false;
+        }
+
+        // 3. Teleport to designated spawner & activate the corresponding ReviveArea
+        if (GameManager.Instance != null)
+        {
+            Transform spawnPoint = GameManager.Instance.playerSpawners[photonView.Owner.ActorNumber - 1];
+            transform.position = spawnPoint.position;
+            transform.rotation = spawnPoint.rotation;
+
+            GameObject reviveArea = GameManager.Instance.reviveAreas[photonView.Owner.ActorNumber - 1];
+            if (reviveArea != null)
+            {
+                reviveArea.SetActive(true);
+                ReviveTrigger reviveTrigger = reviveArea.GetComponent<ReviveTrigger>();
+                if (reviveTrigger != null)
+                {
+                    reviveTrigger.downedPlayer = this;
+                }
+            }
+        }
+
+        // 4. Show Dead Panel UI, but only if the game isn't already over.
+        if (gameOverPanel != null && !gameOverPanel.activeInHierarchy)
+        {
+            if (deadPanel != null) deadPanel.SetActive(true);
+        }
+
+        yield return null; // End the coroutine, we now wait for a Revive RPC
     }
 
     // Update is called once per frame
     void Update()
     {
-        
+        if (photonView.IsMine && transform.position.y < -30f)
+        {
+            if (health > 0)
+            {
+                health = 0;
+                UpdateHealthBars();
+                Die();
+            }
+        }
     }
 }

@@ -12,7 +12,7 @@ public class GameManager : MonoBehaviour
     GameObject playerPrefab;
 
     [SerializeField]
-    private Transform[] playerSpawners;
+    public Transform[] playerSpawners;
 
     private bool isCursorLocked = true;
 
@@ -21,6 +21,12 @@ public class GameManager : MonoBehaviour
     private float timeRemaining;
     private bool timerIsRunning = false;
     private TextMeshProUGUI timerText;
+
+    [Header("Spawner Visuals")]
+    public GameObject[] spawnerVisuals;
+
+    [Header("Revive Areas")]
+    public GameObject[] reviveAreas;
 
     private void Awake()
     {
@@ -115,5 +121,19 @@ public class GameManager : MonoBehaviour
         float seconds = Mathf.FloorToInt(timeToDisplay % 60);
 
         timerText.text = string.Format("{0:00}:{1:00}", minutes, seconds);
+    }
+
+    public void HideSpawners()
+    {
+        if (spawnerVisuals != null)
+        {
+            foreach (GameObject spawner in spawnerVisuals)
+            {
+                if (spawner != null)
+                {
+                    spawner.SetActive(false);
+                }
+            }
+        }
     }
 }

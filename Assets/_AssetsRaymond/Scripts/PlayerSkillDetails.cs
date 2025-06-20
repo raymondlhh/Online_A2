@@ -15,6 +15,7 @@ public class PlayerSkillDetails : MonoBehaviour
     public bool isTimedSlowFall = false;
     public bool isTimedGhostCloak = false;
     public bool isShadowSwapSkill = false;
+    public bool isConnectMovementSkill = false;
     public float skillDuration = 15f;
 
     [Header("UI")]
@@ -31,6 +32,7 @@ public class PlayerSkillDetails : MonoBehaviour
     private PlayerHealth playerHealth;
     private PlayerMovementController playerMovementController;
     private PlayerVisibilityController playerVisibilityController;
+    private PlayerConnector playerConnector;
 
     private bool slowFallActive = false;
     private Coroutine timedSkillUICoroutine;
@@ -64,6 +66,7 @@ public class PlayerSkillDetails : MonoBehaviour
         playerHealth = GetComponentInParent<PlayerHealth>();
         playerMovementController = GetComponentInParent<PlayerMovementController>();
         playerVisibilityController = GetComponentInParent<PlayerVisibilityController>();
+        playerConnector = GetComponentInParent<PlayerConnector>();
 
         if (isShadowSwapSkill && shadowSwapFXPrefab == null)
         {
@@ -134,59 +137,51 @@ public class PlayerSkillDetails : MonoBehaviour
         Debug.Log($"UseSkill called on {gameObject.name}. isTimedSwordSkill is set to: {isTimedSwordBlade}");
 
         bool isTimedSkill = false;
-        if (isTimedSwordBlade)
+        if (isTimedSwordBlade && playerShoot != null)
         {
-            if (playerShoot != null)
+            playerShoot.ActivateSword(skillDuration);
+            isTimedSkill = true;
+        }
+        if (isTimedBloodLock && playerHealth != null)
+        {
+            playerHealth.ActivateBloodLock(skillDuration);
+            isTimedSkill = true;
+        }
+        if (isTimedHighJump && playerMovementController != null)
+        {
+            playerMovementController.ActivateHighJump(skillDuration);
+            isTimedSkill = true;
+        }
+        if (isTimedSlowFall && playerMovementController != null)
+        {
+            playerMovementController.ActivateSlowFall(skillDuration);
+            slowFallActive = true;
+            isTimedSkill = true;
+        }
+        if (isTimedGhostCloak && playerVisibilityController != null)
+        {
+            playerVisibilityController.ActivateGhostCloak(skillDuration);
+            isTimedSkill = true;
+        }
+
+        bool connectSuccess = false;
+        if (isConnectMovementSkill)
+        {
+            if (playerConnector != null)
             {
-                playerShoot.ActivateSword(skillDuration);
-                isTimedSkill = true;
+                connectSuccess = playerConnector.TryConnect(skillDuration);
             }
         }
 
-        if (isTimedBloodLock)
-        {
-            if (playerHealth != null)
-            {
-                playerHealth.ActivateBloodLock(skillDuration);
-                isTimedSkill = true;
-            }
-        }
-
-        if (isTimedHighJump)
-        {
-            if (playerMovementController != null)
-            {
-                playerMovementController.ActivateHighJump(skillDuration);
-                isTimedSkill = true;
-            }
-        }
-
-        if (isTimedSlowFall)
-        {
-            if (playerMovementController != null)
-            {
-                playerMovementController.ActivateSlowFall(skillDuration);
-                slowFallActive = true;
-                isTimedSkill = true;
-            }
-        }
-
-        if (isTimedGhostCloak)
-        {
-            if (playerVisibilityController != null)
-            {
-                playerVisibilityController.ActivateGhostCloak(skillDuration);
-                isTimedSkill = true;
-            }
-        }
-
-        if (isTimedSkill)
+        if (isTimedSkill || (isConnectMovementSkill && connectSuccess))
         {
             timedSkillUICoroutine = StartCoroutine(HandleTimedSkillUI(skillDuration));
         }
 
-        Debug.Log($"Activating skill {gameObject.name} on key {skillKey}. Cooldown started for {skillCooldown} seconds.");
-        StartCooldown();
+        if (!isConnectMovementSkill || connectSuccess)
+        {
+            StartCooldown();
+        }
     }
 
     private void HandleShadowSwap()

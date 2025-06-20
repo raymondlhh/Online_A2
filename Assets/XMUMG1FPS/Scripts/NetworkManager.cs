@@ -194,82 +194,22 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         Debug.Log(PhotonNetwork.LocalPlayer.NickName + " joined to " + PhotonNetwork.CurrentRoom.Name);
         ActivatePanel(InsideRoom_UI_Panel.name);
 
-        if(PhotonNetwork.LocalPlayer.IsMasterClient)
-        {
-            startGameButton.SetActive(true);
-        }
-        else
-        {
-            startGameButton.SetActive(false);
-        }
-
-        roomNameText.text = "Room Name: " + PhotonNetwork.CurrentRoom.Name;
-        maxPlayersText.text = "Max Player: " + PhotonNetwork.CurrentRoom.PlayerCount + " / " + PhotonNetwork.CurrentRoom.MaxPlayers;
-        
-        if(playerListGameobjects == null)
+        if (playerListGameobjects == null)
         {
             playerListGameobjects = new Dictionary<int, GameObject>();
         }
 
-        //Instantiating player list game gameobjects
-        foreach (Player player in PhotonNetwork.PlayerList)
-        {
-            GameObject playerListGameobject = Instantiate(playerListPrefab);
-            playerListGameobject.transform.SetParent(playerListContent.transform);
-            playerListGameobject.transform.localScale = Vector3.one;
-
-            playerListGameobject.transform.Find("PlayerNameText").GetComponent<Text>().text = player.NickName;
-
-            if(player.ActorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
-            {
-                playerListGameobject.transform.Find("PlayerIndicator").gameObject.SetActive(true);
-            }
-            else
-            {
-                playerListGameobject.transform.Find("PlayerIndicator").gameObject.SetActive(false);
-            }
-            playerListGameobjects.Add(player.ActorNumber, playerListGameobject);
-            
-        }
+        UpdateRoomUI();
     }
-
-    
 
     public override void OnPlayerEnteredRoom(Player newPlayer)
     {
-        //update room info text
-        roomInfoText.text = "Room name: " + PhotonNetwork.CurrentRoom.Name + " " +
-                                "Players/Max.players: " +
-                                PhotonNetwork.CurrentRoom.PlayerCount + "/" +
-                                PhotonNetwork.CurrentRoom.MaxPlayers;
-
-        GameObject playerListGameobject = Instantiate(playerListPrefab);
-        playerListGameobject.transform.SetParent(playerListContent.transform);
-        playerListGameobject.transform.localScale = Vector3.one;
-
-        playerListGameobject.transform.Find("PlayerNameText").GetComponent<Text>().text = newPlayer.NickName;
-
-        if (newPlayer.ActorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
-        {
-            playerListGameobject.transform.Find("PlayerIndicator").gameObject.SetActive(true);
-        }
-        else
-        {
-            playerListGameobject.transform.Find("PlayerIndicator").gameObject.SetActive(false);
-        }
-        playerListGameobjects.Add(newPlayer.ActorNumber, playerListGameobject);
+        UpdateRoomUI();
     }
 
     public override void OnPlayerLeftRoom(Player otherPlayer)
     {
-        //update room info text
-        roomInfoText.text = "Room name: " + PhotonNetwork.CurrentRoom.Name + " " +
-                                "Players/Max.players: " +
-                                PhotonNetwork.CurrentRoom.PlayerCount + "/" +
-                                PhotonNetwork.CurrentRoom.MaxPlayers;
-
-        Destroy(playerListGameobjects[otherPlayer.ActorNumber].gameObject);
-        playerListGameobjects.Remove(otherPlayer.ActorNumber);
+        UpdateRoomUI();
     }
 
     public override void OnLeftRoom()
@@ -282,6 +222,39 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         }
         playerListGameobjects.Clear();
         playerListGameobjects = null;
+    }
+
+    private void UpdateRoomUI()
+    {
+        // Update Room Info
+        roomNameText.text = "Room Name: " + PhotonNetwork.CurrentRoom.Name;
+        maxPlayersText.text = "Max Player: " + PhotonNetwork.CurrentRoom.PlayerCount + " / " + PhotonNetwork.CurrentRoom.MaxPlayers;
+        
+        // Clear previous player list
+        foreach (GameObject playerListGameobject in playerListGameobjects.Values)
+        {
+            Destroy(playerListGameobject);
+        }
+        playerListGameobjects.Clear();
+
+        // Regenerate player list
+        foreach (Player player in PhotonNetwork.PlayerList)
+        {
+            GameObject playerListGameobject = Instantiate(playerListPrefab);
+            playerListGameobject.transform.SetParent(playerListContent.transform);
+            playerListGameobject.transform.localScale = Vector3.one;
+
+            playerListGameobject.transform.Find("PlayerNameText").GetComponent<Text>().text = player.NickName;
+
+            playerListGameobject.transform.Find("PlayerIndicator").gameObject.SetActive(
+                player.ActorNumber == PhotonNetwork.LocalPlayer.ActorNumber
+            );
+
+            playerListGameobjects.Add(player.ActorNumber, playerListGameobject);
+        }
+
+        // Update Start Game Button
+        startGameButton.SetActive(PhotonNetwork.IsMasterClient);
     }
 
     public override void OnRoomListUpdate(List<RoomInfo> roomList)
