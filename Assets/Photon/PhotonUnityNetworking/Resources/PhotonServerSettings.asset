@@ -57,6 +57,8 @@ MonoBehaviour:
   - CheckForGameOver
   - TriggerGameOver
   - GoDown
+  - RequestReviveRPC
+  - StopSpectatingRPC
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

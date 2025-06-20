@@ -2,9 +2,10 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Photon.Pun;
+using Photon.Realtime;
 using TMPro;
 
-public class GameManager : MonoBehaviour
+public class GameManager : MonoBehaviourPunCallbacks
 {
     public static GameManager Instance { get; private set; }
 
@@ -40,27 +41,51 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    public override void OnEnable()
+    {
+        base.OnEnable();
+        
+        // Ensure player is spawned when the scene loads
+        if (PhotonNetwork.IsConnectedAndReady && PhotonNetwork.InRoom)
+        {
+            // Add a small delay to ensure everything is initialized
+            StartCoroutine(SpawnPlayerDelayed());
+        }
+    }
+
+    private IEnumerator SpawnPlayerDelayed()
+    {
+        yield return new WaitForSeconds(0.1f);
+        
+        object isAlive;
+        if (
+            !PhotonNetwork.LocalPlayer.CustomProperties.TryGetValue("IsAlive", out isAlive) ||
+            !(bool)isAlive
+        )
+        {
+            SpawnPlayerAtSpawner(PhotonNetwork.LocalPlayer.ActorNumber);
+        }
+    }
+
     // Start is called before the first frame update
     void Start()
     {
-        // // Lock cursor at start
-        // Cursor.lockState = CursorLockMode.Locked;
-        // Cursor.visible = false;
+    }
 
-        if (PhotonNetwork.IsConnectedAndReady)
+    // Method to spawn a player at their designated spawner (called when revived)
+    public void SpawnPlayerAtSpawner(int playerActorNumber)
+    {
+        if (playerPrefab != null && playerSpawners.Length >= PhotonNetwork.CurrentRoom.PlayerCount)
         {
-            if (playerPrefab != null && playerSpawners.Length >= PhotonNetwork.CurrentRoom.PlayerCount)
-            {
-                int playerIndex = PhotonNetwork.LocalPlayer.ActorNumber - 1; // ActorNumber starts at 1
-                playerIndex = Mathf.Clamp(playerIndex, 0, playerSpawners.Length - 1);
+            int playerIndex = playerActorNumber - 1; // ActorNumber starts at 1
+            playerIndex = Mathf.Clamp(playerIndex, 0, playerSpawners.Length - 1);
 
-                Transform spawnPoint = playerSpawners[playerIndex];
-                PhotonNetwork.Instantiate(playerPrefab.name, spawnPoint.position, spawnPoint.rotation);
-            }
-            else
-            {
-                Debug.Log("Place playerPrefab or assign all spawners!");
-            }
+            Transform spawnPoint = playerSpawners[playerIndex];
+            PhotonNetwork.Instantiate(playerPrefab.name, spawnPoint.position, spawnPoint.rotation);
+        }
+        else
+        {
+            Debug.Log("Place playerPrefab or assign all spawners!");
         }
     }
 
@@ -135,5 +160,32 @@ public class GameManager : MonoBehaviour
                 }
             }
         }
+    }
+
+    // Photon callbacks
+    public override void OnJoinedRoom()
+    {
+        // Spawn the local player when they join the room
+        if (PhotonNetwork.IsConnectedAndReady)
+        {
+            // Set IsAlive property
+            var props = new ExitGames.Client.Photon.Hashtable();
+            props["IsAlive"] = true;
+            PhotonNetwork.LocalPlayer.SetCustomProperties(props);
+
+            SpawnPlayerAtSpawner(PhotonNetwork.LocalPlayer.ActorNumber);
+        }
+    }
+
+    public override void OnPlayerEnteredRoom(Photon.Realtime.Player newPlayer)
+    {
+        // Set IsAlive property for new player
+        var props = new ExitGames.Client.Photon.Hashtable();
+        props["IsAlive"] = true;
+        newPlayer.SetCustomProperties(props);
+    }
+
+    public override void OnPlayerLeftRoom(Photon.Realtime.Player otherPlayer)
+    {
     }
 }

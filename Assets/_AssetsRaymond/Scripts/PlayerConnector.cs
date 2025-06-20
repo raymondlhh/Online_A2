@@ -59,6 +59,14 @@ public class PlayerConnector : MonoBehaviourPunCallbacks
     [PunRPC]
     public void GetConnected(int connectorViewID, float duration)
     {
+        // Check if this player is downed (dead) - if so, refuse the connection
+        PlayerHealth playerHealth = GetComponent<PlayerHealth>();
+        if (playerHealth != null && playerHealth.IsDowned)
+        {
+            Debug.Log($"Player {photonView.Owner.NickName} is downed and cannot be connected.");
+            return;
+        }
+
         PhotonView connectorView = PhotonView.Find(connectorViewID);
         if (connectorView == null) return;
         

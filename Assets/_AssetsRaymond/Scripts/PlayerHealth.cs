@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using Photon.Pun;
+using Photon.Realtime;
 using ExitGames.Client.Photon;
+using TMPro;
 
 public class PlayerHealth : MonoBehaviourPunCallbacks
 {
@@ -16,6 +18,12 @@ public class PlayerHealth : MonoBehaviourPunCallbacks
     [SerializeField] private GameObject deadPanel;
     [SerializeField] private GameObject gameOverPanel;
 
+    [Header("Revive System")]
+    [SerializeField] private GameObject revivePromptUI;
+    [SerializeField] private TextMeshProUGUI revivePromptText;
+    [SerializeField] private string deadMarkPrefabName = "DeadMark";
+
+    private GameObject instantiatedDeadMark;
     private float health;
     private Animator animator;
     private bool isLocalPlayer;
@@ -134,30 +142,11 @@ public class PlayerHealth : MonoBehaviourPunCallbacks
         Debug.Log($"Player {photonView.Owner.NickName} invulnerability set to: {state}");
     }
 
-    [PunRPC]
-    public void Revive()
-    {
-        IsDowned = false;
-        if (isLocalPlayer)
-        {
-            if (deadPanel != null) deadPanel.SetActive(false);
-            
-            movementController.CanMove = true;
-            movementController.CanLook = true;
-            playerShoot.enabled = true;
-            foreach (var skill in skillDetails)
-            {
-                skill.enabled = true;
-            }
-        }
-        RegainHealth();
-    }
-
     void Die()
     {
         if (isLocalPlayer)
         {
-            // Tell all clients that this player is now in the downed state.
+            // Tell all clients that this player is now dead.
             photonView.RPC("GoDown", RpcTarget.All);
         }
     }
@@ -167,19 +156,18 @@ public class PlayerHealth : MonoBehaviourPunCallbacks
     {
         IsDowned = true;
 
+        if (animator != null)
+            animator.SetBool("IsDead", true);
+
         if (isLocalPlayer)
         {
-            if (animator != null)
-                animator.SetBool("IsDead", true);
-            
+            // Set custom property to dead
+            var props = new ExitGames.Client.Photon.Hashtable();
+            props["IsAlive"] = false;
+            PhotonNetwork.LocalPlayer.SetCustomProperties(props);
+
             // This player is the one who died. Run the local "downed" sequence.
             StartCoroutine(EnterDownedState());
-        }
-
-        // After the state is updated, the Master Client checks if the game is over.
-        if (PhotonNetwork.IsMasterClient)
-        {
-            CheckForGameOver();
         }
     }
 
@@ -188,28 +176,43 @@ public class PlayerHealth : MonoBehaviourPunCallbacks
         // This check only runs on the Master Client for authority.
         if (!PhotonNetwork.IsMasterClient) return;
 
-        PlayerHealth[] allPlayers = FindObjectsOfType<PlayerHealth>();
-
-        // If a player is still loading in, the game isn't over.
-        if (allPlayers.Length < PhotonNetwork.CurrentRoom.PlayerCount)
+        // Check if all players are dead 
+        bool allPlayersDead = true;
+        foreach (var player in PhotonNetwork.PlayerList)
         {
-            return;
-        }
-
-        foreach (var player in allPlayers)
-        {
-            // If we find even one player who isn't downed, the game continues.
-            if (!player.IsDowned)
+            object isAlive;
+            if (player.CustomProperties.TryGetValue("IsAlive", out isAlive))
             {
-                return;
+                if ((bool)isAlive)
+                {
+                    allPlayersDead = false;
+                    break;
+                }
+            }
+            else
+            {
+                // Property not set yet, assume they are alive.
+                allPlayersDead = false;
+                break;
             }
         }
 
-        // If the loop completes, all players are downed. Game Over.
-        // Use a room property to signal game over to all clients.
-        ExitGames.Client.Photon.Hashtable props = new ExitGames.Client.Photon.Hashtable();
-        props["GameOver"] = true;
-        PhotonNetwork.CurrentRoom.SetCustomProperties(props);
+        // If all players are dead, trigger game over
+        if (allPlayersDead)
+        {
+            ExitGames.Client.Photon.Hashtable props = new ExitGames.Client.Photon.Hashtable();
+            props["GameOver"] = true;
+            PhotonNetwork.CurrentRoom.SetCustomProperties(props);
+        }
+    }
+
+    public override void OnPlayerPropertiesUpdate(Player targetPlayer, ExitGames.Client.Photon.Hashtable changedProps)
+    {
+        // When a player's "IsAlive" status changes, check for game over.
+        if (PhotonNetwork.IsMasterClient && changedProps.ContainsKey("IsAlive"))
+        {
+            CheckForGameOver();
+        }
     }
 
     public override void OnRoomPropertiesUpdate(ExitGames.Client.Photon.Hashtable propertiesThatChanged)
@@ -237,16 +240,6 @@ public class PlayerHealth : MonoBehaviourPunCallbacks
             deadPanel.SetActive(false);
         }
 
-        // Deactivate the revive area associated with this player
-        if (photonView.IsMine)
-        {
-            GameObject reviveArea = GameManager.Instance.reviveAreas[photonView.Owner.ActorNumber - 1];
-            if (reviveArea != null)
-            {
-                reviveArea.SetActive(false);
-            }
-        }
-
         // Unlock cursor
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
@@ -263,22 +256,23 @@ public class PlayerHealth : MonoBehaviourPunCallbacks
             skill.enabled = false;
         }
 
-        // 3. Teleport to designated spawner & activate the corresponding ReviveArea
+        // 2. Teleport to spawner and stay there
         if (GameManager.Instance != null)
         {
             Transform spawnPoint = GameManager.Instance.playerSpawners[photonView.Owner.ActorNumber - 1];
             transform.position = spawnPoint.position;
             transform.rotation = spawnPoint.rotation;
+        }
 
-            GameObject reviveArea = GameManager.Instance.reviveAreas[photonView.Owner.ActorNumber - 1];
-            if (reviveArea != null)
+        // 3. Spawn DeadMark at spawner location
+        if (photonView.IsMine && !string.IsNullOrEmpty(deadMarkPrefabName))
+        {
+            // Instantiate the dead mark over the network at the spawner position
+            instantiatedDeadMark = PhotonNetwork.Instantiate(deadMarkPrefabName, transform.position + Vector3.up, transform.rotation);
+            // Parent it to the player so it moves with them
+            if (instantiatedDeadMark != null)
             {
-                reviveArea.SetActive(true);
-                ReviveTrigger reviveTrigger = reviveArea.GetComponent<ReviveTrigger>();
-                if (reviveTrigger != null)
-                {
-                    reviveTrigger.downedPlayer = this;
-                }
+                instantiatedDeadMark.transform.SetParent(this.transform);
             }
         }
 
@@ -288,7 +282,50 @@ public class PlayerHealth : MonoBehaviourPunCallbacks
             if (deadPanel != null) deadPanel.SetActive(true);
         }
 
-        yield return null; // End the coroutine, we now wait for a Revive RPC
+        // 5. Player stays at spawner waiting for revive
+        yield return null;
+    }
+
+    [PunRPC]
+    public void Revive()
+    {
+        IsDowned = false;
+
+        if (animator != null)
+        {
+            animator.SetBool("IsDead", false);
+        }
+
+        if (photonView.IsMine)
+        {
+            if (instantiatedDeadMark != null)
+            {
+                PhotonNetwork.Destroy(instantiatedDeadMark);
+            }
+        }
+        
+        if (isLocalPlayer)
+        {
+            // Set custom property to alive
+            var props = new ExitGames.Client.Photon.Hashtable();
+            props["IsAlive"] = true;
+            PhotonNetwork.LocalPlayer.SetCustomProperties(props);
+
+            // Hide dead panel
+            if (deadPanel != null) deadPanel.SetActive(false);
+            
+            // Re-enable controls
+            movementController.CanMove = true;
+            movementController.CanLook = true;
+            playerShoot.enabled = true;
+            foreach (var skill in skillDetails)
+            {
+                skill.enabled = true;
+            }
+        }
+        
+        // Restore health
+        RegainHealth();
     }
 
     // Update is called once per frame
