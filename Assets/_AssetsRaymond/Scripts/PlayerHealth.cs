@@ -10,25 +10,41 @@ public class PlayerHealth : MonoBehaviourPunCallbacks
     public float startHealth = 100;
     
     [Header("UI Elements")]
-    public Image TPHealthBar;    // Third person healthbar
-    public Image FPHealthBar;    // First person healthbar
+    [SerializeField] private Image TPHealthBar;    // Third person healthbar
+    [SerializeField] private Image FPHealthBar;    // First person healthbar
 
     private float health;
     private Animator animator;
+    private bool isLocalPlayer;
 
-    // Start is called before the first frame update
+    void Awake()
+    {
+        isLocalPlayer = photonView.IsMine;
+        
+        // Disable FP UI elements for non-local players
+        if (!isLocalPlayer && FPHealthBar != null)
+        {
+            Transform fpUI = FPHealthBar.transform.root.Find("FP_PlayerUI");
+            if (fpUI != null)
+            {
+                fpUI.gameObject.SetActive(false);
+            }
+        }
+    }
+
     void Start()
     {
         health = startHealth;
-        UpdateHealthBars();
         animator = GetComponent<Animator>();
+        UpdateHealthBars();
     }
 
     [PunRPC]
     public void TakeDamage(float _damage, PhotonMessageInfo info)
     {
         health -= _damage;
-        Debug.Log(health);
+        health = Mathf.Max(0, health); // Prevent negative health
+        Debug.Log($"Player {photonView.Owner.NickName} took damage. Health: {health}");
 
         UpdateHealthBars();
 
@@ -37,6 +53,13 @@ public class PlayerHealth : MonoBehaviourPunCallbacks
             Die();
             Debug.Log(info.Sender.NickName + " killed " + info.photonView.Owner.NickName);
         }
+    }
+
+    [PunRPC]
+    void SyncHealth(float newHealth)
+    {
+        health = newHealth;
+        UpdateHealthBars();
     }
 
     [PunRPC]
@@ -50,18 +73,24 @@ public class PlayerHealth : MonoBehaviourPunCallbacks
     {
         float healthPercentage = health / startHealth;
         
-        // Update Third Person healthbar
+        // Update Third Person healthbar for everyone
         if (TPHealthBar != null)
+        {
             TPHealthBar.fillAmount = healthPercentage;
+            Debug.Log($"Updating TP healthbar for {photonView.Owner.NickName}: {healthPercentage}");
+        }
             
-        // Update First Person healthbar
-        if (FPHealthBar != null)
+        // Update First Person healthbar only for local player
+        if (isLocalPlayer && FPHealthBar != null)
+        {
             FPHealthBar.fillAmount = healthPercentage;
+            Debug.Log($"Updating FP healthbar: {healthPercentage}");
+        }
     }
 
     void Die()
     {
-        if (photonView.IsMine)
+        if (isLocalPlayer)
         {
             if (animator != null)
                 animator.SetBool("IsDead", true);
@@ -98,7 +127,7 @@ public class PlayerHealth : MonoBehaviourPunCallbacks
         var movement2 = GetComponent<PlayerMovementController>();
         if (movement2 != null) movement2.enabled = true;
 
-        photonView.RPC("RegainHealth", RpcTarget.AllBuffered);
+        RegainHealth();
     }
 
     // Update is called once per frame

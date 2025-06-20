@@ -876,8 +876,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   startHealth: 100
-  TPHealthBar: {fileID: 6125347934317124827}
-  FPHealthBar: {fileID: 6089306774888159639}
+  TPHealthBar: {fileID: 3293854786857738884}
+  FPHealthBar: {fileID: 4307277015148040951}
 --- !u!114 &6200101482668823066
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1763,7 +1763,7 @@ GameObject:
   - component: {fileID: 7608446948642741661}
   - component: {fileID: 3293854786857738884}
   m_Layer: 0
-  m_Name: HealthBar
+  m_Name: TPHealthBar
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3577,7 +3577,7 @@ GameObject:
   - component: {fileID: 2603921443277550768}
   - component: {fileID: 6089306774888159639}
   m_Layer: 0
-  m_Name: FPHealthBar
+  m_Name: FPHealthBackground
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4601,7 +4601,7 @@ GameObject:
   - component: {fileID: 8663238598042139240}
   - component: {fileID: 6125347934317124827}
   m_Layer: 0
-  m_Name: TPHealthBar
+  m_Name: TPHealthBackground
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -10026,7 +10026,7 @@ GameObject:
   - component: {fileID: 2356924080548743634}
   - component: {fileID: 4307277015148040951}
   m_Layer: 0
-  m_Name: HealthBar
+  m_Name: FPHealthBar
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
