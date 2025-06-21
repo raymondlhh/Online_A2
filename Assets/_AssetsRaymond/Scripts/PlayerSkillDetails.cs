@@ -42,6 +42,8 @@ public class PlayerSkillDetails : MonoBehaviour
     private Vector3 _shadowSwapPosition;
     private Coroutine _shadowMarkerCoroutine;
 
+    private bool isConnectSkillActive = false;
+
     public bool IsOnCooldown => currentCooldown > 0f;
 
     // Start is called before the first frame update
@@ -79,7 +81,18 @@ public class PlayerSkillDetails : MonoBehaviour
     {
         if (Input.GetKeyDown(skillKey))
         {
-            if (isShadowSwapSkill)
+            if (isConnectMovementSkill && isConnectSkillActive)
+            {
+                if (playerConnector != null)
+                {
+                    playerConnector.CancelConnection();
+                }
+                isConnectSkillActive = false;
+                
+                if (timedSkillUICoroutine != null) StopCoroutine(timedSkillUICoroutine);
+                if (durationText != null) durationText.gameObject.SetActive(false);
+            }
+            else if (isShadowSwapSkill)
             {
                 HandleShadowSwap();
             }
@@ -170,6 +183,10 @@ public class PlayerSkillDetails : MonoBehaviour
             if (playerConnector != null)
             {
                 connectSuccess = playerConnector.TryConnect(skillDuration);
+                if (connectSuccess)
+                {
+                    isConnectSkillActive = true;
+                }
             }
         }
 
@@ -267,6 +284,11 @@ public class PlayerSkillDetails : MonoBehaviour
             }
             remainingDuration -= Time.deltaTime;
             yield return null;
+        }
+
+        if (isConnectMovementSkill)
+        {
+            isConnectSkillActive = false;
         }
 
         if (bloodLockUI != null && isTimedBloodLock)

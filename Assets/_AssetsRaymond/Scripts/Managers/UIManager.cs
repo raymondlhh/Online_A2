@@ -69,7 +69,7 @@ public class UIManager : MonoBehaviourPunCallbacks
 
     void OnSelectCharacter(string key)
     {
-        if (!IsCharacterTaken(key))
+        if (!IsCharacterTaken(key) && !LocalPlayerHasChosenCharacter())
         {
             ExitGames.Client.Photon.Hashtable props = new ExitGames.Client.Photon.Hashtable();
             props[key] = PhotonNetwork.LocalPlayer.ActorNumber;
@@ -108,6 +108,11 @@ public class UIManager : MonoBehaviourPunCallbacks
                (int)PhotonNetwork.CurrentRoom.CustomProperties[key] == PhotonNetwork.LocalPlayer.ActorNumber;
     }
 
+    bool LocalPlayerHasChosenCharacter()
+    {
+        return IsCharacterTakenByMe(JADEN_KEY) || IsCharacterTakenByMe(ALICE_KEY) || IsCharacterTakenByMe(JACK_KEY);
+    }
+
     List<int> GetAllChosenActorNumbers()
     {
         List<int> chosen = new List<int>();
@@ -129,24 +134,26 @@ public class UIManager : MonoBehaviourPunCallbacks
 
     void UpdateCharacterPanels()
     {
+        bool localPlayerHasChosen = LocalPlayerHasChosenCharacter();
+
         // Jaden
         bool jadenTaken = IsCharacterTaken(JADEN_KEY);
         bool jadenMine = IsCharacterTakenByMe(JADEN_KEY);
-        JadenSelectButton.gameObject.SetActive(!jadenTaken);
+        JadenSelectButton.gameObject.SetActive(!jadenTaken && !localPlayerHasChosen);
         JadenChoosenPanel.SetActive(jadenTaken);
         JadenCancelButton.gameObject.SetActive(jadenMine);
 
         // Alice
         bool aliceTaken = IsCharacterTaken(ALICE_KEY);
         bool aliceMine = IsCharacterTakenByMe(ALICE_KEY);
-        AliceSelectButton.gameObject.SetActive(!aliceTaken);
+        AliceSelectButton.gameObject.SetActive(!aliceTaken && !localPlayerHasChosen);
         AliceChoosenPanel.SetActive(aliceTaken);
         AliceCancelButton.gameObject.SetActive(aliceMine);
 
         // Jack
         bool jackTaken = IsCharacterTaken(JACK_KEY);
         bool jackMine = IsCharacterTakenByMe(JACK_KEY);
-        JackSelectButton.gameObject.SetActive(!jackTaken);
+        JackSelectButton.gameObject.SetActive(!jackTaken && !localPlayerHasChosen);
         JackChoosenPanel.SetActive(jackTaken);
         JackCancelButton.gameObject.SetActive(jackMine);
 

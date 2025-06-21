@@ -20,6 +20,7 @@ public class PlayerConnector : MonoBehaviourPunCallbacks
     private bool isAttached = false;
     private Transform attachTarget; 
     private Coroutine connectionCoroutine;
+    private PhotonView connectedPlayerView;
 
     void Start()
     {
@@ -49,6 +50,13 @@ public class PlayerConnector : MonoBehaviourPunCallbacks
             PhotonView targetView = hit.collider.GetComponentInParent<PhotonView>();
             if (targetView != null && !targetView.IsMine)
             {
+                PlayerHealth targetHealth = targetView.GetComponent<PlayerHealth>();
+                if (targetHealth != null && targetHealth.IsDowned)
+                {
+                    return false; // Don't connect to downed players
+                }
+
+                connectedPlayerView = targetView;
                 targetView.RPC("GetConnected", RpcTarget.All, photonView.ViewID, duration);
                 return true; // Success
             }
@@ -59,14 +67,6 @@ public class PlayerConnector : MonoBehaviourPunCallbacks
     [PunRPC]
     public void GetConnected(int connectorViewID, float duration)
     {
-        // Check if this player is downed (dead) - if so, refuse the connection
-        PlayerHealth playerHealth = GetComponent<PlayerHealth>();
-        if (playerHealth != null && playerHealth.IsDowned)
-        {
-            Debug.Log($"Player {photonView.Owner.NickName} is downed and cannot be connected.");
-            return;
-        }
-
         PhotonView connectorView = PhotonView.Find(connectorViewID);
         if (connectorView == null) return;
         
@@ -75,6 +75,46 @@ public class PlayerConnector : MonoBehaviourPunCallbacks
 
         if (connectionCoroutine != null) StopCoroutine(connectionCoroutine);
         connectionCoroutine = StartCoroutine(ConnectionLifetime(connector.connectionSlot, duration));
+    }
+
+    public void CancelConnection()
+    {
+        if (connectedPlayerView != null)
+        {
+            connectedPlayerView.RPC("ForceDetach", RpcTarget.All);
+            connectedPlayerView = null;
+        }
+    }
+
+    [PunRPC]
+    public void ForceDetach()
+    {
+        if (isAttached)
+        {
+            if (connectionCoroutine != null)
+            {
+                StopCoroutine(connectionCoroutine);
+            }
+            Detach();
+        }
+    }
+
+    private void Detach()
+    {
+        isAttached = false;
+        attachTarget = null;
+        
+        if (photonView.IsMine)
+        {
+            movementController.CanMove = true;
+            foreach (var skill in skillDetails)
+            {
+                skill.enabled = true;
+            }
+
+            if (connectedUI != null) connectedUI.SetActive(false);
+        }
+        connectionCoroutine = null;
     }
 
     private IEnumerator ConnectionLifetime(Transform targetSlot, float duration)
@@ -104,19 +144,6 @@ public class PlayerConnector : MonoBehaviourPunCallbacks
             remainingDuration -= 1f;
         }
 
-        isAttached = false;
-        attachTarget = null;
-        
-        if (photonView.IsMine)
-        {
-            movementController.CanMove = true;
-            foreach (var skill in skillDetails)
-            {
-                skill.enabled = true;
-            }
-
-            if (connectedUI != null) connectedUI.SetActive(false);
-        }
-        connectionCoroutine = null;
+        Detach();
     }
 } 

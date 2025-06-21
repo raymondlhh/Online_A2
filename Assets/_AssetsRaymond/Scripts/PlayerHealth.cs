@@ -18,12 +18,8 @@ public class PlayerHealth : MonoBehaviourPunCallbacks
     [SerializeField] private GameObject deadPanel;
     [SerializeField] private GameObject gameOverPanel;
 
-    [Header("Revive System")]
-    [SerializeField] private GameObject revivePromptUI;
-    [SerializeField] private TextMeshProUGUI revivePromptText;
-    [SerializeField] private string deadMarkPrefabName = "DeadMark";
+    // Revive UI is now handled by PlayerReviver script
 
-    private GameObject instantiatedDeadMark;
     private float health;
     private Animator animator;
     private bool isLocalPlayer;
@@ -264,19 +260,7 @@ public class PlayerHealth : MonoBehaviourPunCallbacks
             transform.rotation = spawnPoint.rotation;
         }
 
-        // 3. Spawn DeadMark at spawner location
-        if (photonView.IsMine && !string.IsNullOrEmpty(deadMarkPrefabName))
-        {
-            // Instantiate the dead mark over the network at the spawner position
-            instantiatedDeadMark = PhotonNetwork.Instantiate(deadMarkPrefabName, transform.position + Vector3.up, transform.rotation);
-            // Parent it to the player so it moves with them
-            if (instantiatedDeadMark != null)
-            {
-                instantiatedDeadMark.transform.SetParent(this.transform);
-            }
-        }
-
-        // 4. Show Dead Panel UI, but only if the game isn't already over.
+        // 3. Show Dead Panel UI, but only if the game isn't already over.
         if (gameOverPanel != null && !gameOverPanel.activeInHierarchy)
         {
             if (deadPanel != null) deadPanel.SetActive(true);
@@ -296,14 +280,6 @@ public class PlayerHealth : MonoBehaviourPunCallbacks
             animator.SetBool("IsDead", false);
         }
 
-        if (photonView.IsMine)
-        {
-            if (instantiatedDeadMark != null)
-            {
-                PhotonNetwork.Destroy(instantiatedDeadMark);
-            }
-        }
-        
         if (isLocalPlayer)
         {
             // Set custom property to alive

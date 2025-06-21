@@ -110,30 +110,30 @@ public class PlayerAppearanceController : MonoBehaviourPun
 
     void Start()
     {
-        // Verify that we have a PhotonView
-        if (photonView == null)
-        {
-            Debug.LogError("PlayerAppearanceController: No PhotonView found on this GameObject!");
-        }
-        else
-        {
-            Debug.Log($"PlayerAppearanceController: PhotonView found. IsMine: {photonView.IsMine}, ViewID: {photonView.ViewID}");
-        }
+        // // Verify that we have a PhotonView
+        // if (photonView == null)
+        // {
+        //     Debug.LogError("PlayerAppearanceController: No PhotonView found on this GameObject!");
+        // }
+        // else
+        // {
+        //     Debug.Log($"PlayerAppearanceController: PhotonView found. IsMine: {photonView.IsMine}, ViewID: {photonView.ViewID}");
+        // }
 
-        // Verify that we have the required components
-        if (bodyRenderer == null)
-        {
-            Debug.LogError("PlayerAppearanceController: bodyRenderer is not assigned!");
-        }
+        // // Verify that we have the required components
+        // if (bodyRenderer == null)
+        // {
+        //     Debug.LogError("PlayerAppearanceController: bodyRenderer is not assigned!");
+        // }
 
-        if (JadenMesh == null || AliceMesh == null || JackMesh == null)
-        {
-            Debug.LogError("PlayerAppearanceController: One or more meshes are not assigned!");
-        }
+        // if (JadenMesh == null || AliceMesh == null || JackMesh == null)
+        // {
+        //     Debug.LogError("PlayerAppearanceController: One or more meshes are not assigned!");
+        // }
 
-        if (JadenDecoration == null || AliceDecoration == null || JackDecoration == null)
-        {
-            Debug.LogError("PlayerAppearanceController: One or more decorations are not assigned!");
-        }
+        // if (JadenDecoration == null || AliceDecoration == null || JackDecoration == null)
+        // {
+        //     Debug.LogError("PlayerAppearanceController: One or more decorations are not assigned!");
+        // }
     }
 }

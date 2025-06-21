@@ -1009,6 +1009,7 @@ GameObject:
   - component: {fileID: 3437796916384169619}
   - component: {fileID: 384254684964356805}
   - component: {fileID: 6542291866942656486}
+  - component: {fileID: 2425708294243718214}
   - component: {fileID: 6200101482668823066}
   - component: {fileID: 6220464359016510288}
   - component: {fileID: 859576328176857816}
@@ -1207,9 +1208,6 @@ MonoBehaviour:
   FPHealthBar: {fileID: 4307277015148040951}
   deadPanel: {fileID: 926253404627744844}
   gameOverPanel: {fileID: 790436496459811219}
-  revivePromptUI: {fileID: 1378027039376930254}
-  revivePromptText: {fileID: 7995472782505135156}
-  deadMarkPrefabName: DeadMark
 --- !u!114 &384254684964356805
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1222,11 +1220,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aaf4a3daaf4c6b0459f5c30a656835a6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  reviveRange: 3
+  reviveKey: 102
+  raycastDistance: 5
   playerLayerMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  reviveKey: 102
   revivePromptUI: {fileID: 1378027039376930254}
   revivePromptText: {fileID: 7995472782505135156}
 --- !u!114 &6542291866942656486
@@ -1245,6 +1243,18 @@ MonoBehaviour:
   connectRange: 15
   connectedUI: {fileID: 2203094839130981193}
   connectedDurationText: {fileID: 6631580139934835501}
+--- !u!114 &2425708294243718214
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 489934268518803760}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61b3279e7c037e04fbab3efabb6a0b23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &6200101482668823066
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1353,7 +1363,7 @@ MonoBehaviour:
     SynchronizeType: 1
     Name: IsSwordAttacking
   m_SynchronizeLayers:
-  - SynchronizeType: 0
+  - SynchronizeType: 1
     LayerIndex: 0
 --- !u!1 &511069155244224617
 GameObject:
@@ -3718,7 +3728,7 @@ GameObject:
   - component: {fileID: 7626479545604531660}
   - component: {fileID: 7995472782505135156}
   m_Layer: 5
-  m_Name: ReviveText
+  m_Name: InteractText
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
