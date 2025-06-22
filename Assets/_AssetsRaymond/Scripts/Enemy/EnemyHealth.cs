@@ -3,11 +3,17 @@ using System.Collections.Generic;
 using UnityEngine;
 using Photon.Pun;
 using UnityEngine.AI;
+using UnityEngine.UI;
 
 [RequireComponent(typeof(PhotonView))]
 public class EnemyHealth : MonoBehaviour
 {
+    [Header("Health Settings")]
     public float startHealth = 100f;
+    [Header("UI")]
+    [SerializeField] private Image healthBar;
+    [SerializeField] private GameObject enemyUICanvas;
+
     private float health;
     private bool isDead = false;
 
@@ -17,6 +23,7 @@ public class EnemyHealth : MonoBehaviour
     private EnemyShoot enemyShoot;
     private Collider mainCollider;
     private PhotonView photonView;
+    private Camera mainCamera;
 
     void Awake()
     {
@@ -32,6 +39,18 @@ public class EnemyHealth : MonoBehaviour
     void Start()
     {
         health = startHealth;
+        mainCamera = Camera.main; // Find the main camera
+        UpdateHealthBar(); // Set initial health bar state
+    }
+
+    void LateUpdate()
+    {
+        // Make the UI always face the player's camera
+        if (enemyUICanvas != null && enemyUICanvas.activeSelf && mainCamera != null)
+        {
+            enemyUICanvas.transform.LookAt(transform.position + mainCamera.transform.rotation * Vector3.forward,
+                mainCamera.transform.rotation * Vector3.up);
+        }
     }
 
     [PunRPC]
@@ -40,6 +59,7 @@ public class EnemyHealth : MonoBehaviour
         if (isDead) return;
 
         health -= amount;
+        UpdateHealthBar(); // Update UI on all clients
         
         if (health <= 0)
         {
@@ -48,9 +68,23 @@ public class EnemyHealth : MonoBehaviour
         }
     }
 
+    void UpdateHealthBar()
+    {
+        if (healthBar != null)
+        {
+            healthBar.fillAmount = health / startHealth;
+        }
+    }
+
     void Die()
     {
         isDead = true;
+        
+        // Hide the health bar canvas
+        if(enemyUICanvas != null)
+        {
+            enemyUICanvas.SetActive(false);
+        }
         
         // Trigger death animation
         if (animator != null)
