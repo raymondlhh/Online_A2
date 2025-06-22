@@ -26,8 +26,11 @@ public class GameManager : MonoBehaviourPunCallbacks
     [Header("Spawner Visuals")]
     public GameObject[] spawnerVisuals;
 
-    [Header("Revive Areas")]
-    public GameObject[] reviveAreas;
+    [Header("Enemy Spawning")]
+    public GameObject[] enemyPrefabs;
+    public Transform[] enemySpawners;
+    public int maxEnemies = 40;
+    public float spawnInterval = 10f;
 
     private void Awake()
     {
@@ -70,6 +73,34 @@ public class GameManager : MonoBehaviourPunCallbacks
     // Start is called before the first frame update
     void Start()
     {
+        if (PhotonNetwork.IsMasterClient)
+        {
+            StartCoroutine(EnemySpawnRoutine());
+        }
+    }
+
+    private IEnumerator EnemySpawnRoutine()
+    {
+        while (true)
+        {
+            yield return new WaitForSeconds(spawnInterval);
+
+            if (GameObject.FindGameObjectsWithTag("Enemy").Length < maxEnemies)
+            {
+                SpawnEnemy();
+            }
+        }
+    }
+
+    private void SpawnEnemy()
+    {
+        int randomPrefabIndex = Random.Range(0, enemyPrefabs.Length);
+        int randomSpawnerIndex = Random.Range(0, enemySpawners.Length);
+
+        GameObject enemyPrefab = enemyPrefabs[randomPrefabIndex];
+        Transform spawnPoint = enemySpawners[randomSpawnerIndex];
+
+        PhotonNetwork.Instantiate(enemyPrefab.name, spawnPoint.position, spawnPoint.rotation);
     }
 
     // Method to spawn a player at their designated spawner (called when revived)

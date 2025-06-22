@@ -29,7 +29,7 @@ public class UIManager : MonoBehaviourPunCallbacks
     const string ALICE_KEY = "AliceChosen";
     const string JACK_KEY = "JackChosen";
 
-    private PlayerAppearanceController appearance;
+    private PlayerAppearance appearance;
     private bool countdownStarted = false;
 
     void Start()
@@ -55,7 +55,7 @@ public class UIManager : MonoBehaviourPunCallbacks
     {
         while (appearance == null)
         {
-            foreach (var controller in FindObjectsOfType<PlayerAppearanceController>())
+            foreach (var controller in FindObjectsOfType<PlayerAppearance>())
             {
                 if (controller.photonView.IsMine)
                 {
@@ -206,7 +206,7 @@ public class UIManager : MonoBehaviourPunCallbacks
 
     void PauseGameplay()
     {
-        var localPlayerMovement = FindObjectsOfType<PlayerMovementController>().FirstOrDefault(p => p.GetComponent<Photon.Pun.PhotonView>()?.IsMine == true);
+        var localPlayerMovement = FindObjectsOfType<PlayerMovement>().FirstOrDefault(p => p.GetComponent<Photon.Pun.PhotonView>()?.IsMine == true);
         if (localPlayerMovement != null)
             localPlayerMovement.enabled = false;
 
@@ -217,7 +217,7 @@ public class UIManager : MonoBehaviourPunCallbacks
 
     void ResumeGameplay()
     {
-        var localPlayerMovement = FindObjectsOfType<PlayerMovementController>().FirstOrDefault(p => p.GetComponent<Photon.Pun.PhotonView>()?.IsMine == true);
+        var localPlayerMovement = FindObjectsOfType<PlayerMovement>().FirstOrDefault(p => p.GetComponent<Photon.Pun.PhotonView>()?.IsMine == true);
         if (localPlayerMovement != null)
             localPlayerMovement.enabled = true;
 
