@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Photon.Pun;
 
 public class ProjectileMove : MonoBehaviour
 {
@@ -8,9 +9,14 @@ public class ProjectileMove : MonoBehaviour
     public float fireRate;
     public GameObject muzzlePrefab;
     public GameObject hitPrefab;
+    public float damage;
+    public float lifetime = 5f; // Time in seconds before the projectile is destroyed
 
     void Start()
     {
+        // Schedule the projectile for destruction at the end of its lifetime
+        Destroy(gameObject, lifetime);
+
         if (muzzlePrefab != null)
         {
             var muzzleVFX = Instantiate(muzzlePrefab, transform.position, Quaternion.identity);
@@ -42,8 +48,25 @@ public class ProjectileMove : MonoBehaviour
 
     void OnCollisionEnter (Collision co)
     {
+        // Stop movement and prevent further collisions
         speed = 0;
+        var collider = GetComponent<Collider>();
+        if (collider != null)
+        {
+            collider.enabled = false;
+        }
 
+        // --- Damage Player logic ---
+        if (co.gameObject.CompareTag("Player"))
+        {
+            PlayerHealth playerHealth = co.gameObject.GetComponent<PlayerHealth>();
+            if (playerHealth != null)
+            {
+                playerHealth.photonView.RPC("TakeDamageFromAI", Photon.Pun.RpcTarget.All, damage);
+            }
+        }
+        
+        // --- Spawn Hit Effect ---
         ContactPoint contact = co.contacts[0];
         Quaternion rot = Quaternion.FromToRotation(Vector3.up, contact.normal);
         Vector3 pos = contact.point;
@@ -62,6 +85,8 @@ public class ProjectileMove : MonoBehaviour
                 Destroy(hitVFX, psChild.main.duration);
             }
         }
+        
+        // --- Immediate Destruction ---
         Destroy(gameObject);
     }
 }

@@ -64,6 +64,23 @@ MonoBehaviour:
   - RPC_SetDoorState
   - PlayerEntered
   - PlayerExited
+  - TakeDamageFromAI
+  - EndGameWithSuccess
+  - RequestDestroy
+  - UpdateVictimUI
+  - ForceDetachFromVictim
+  - GetConnectedToVictim
+  - ForceDetachFromPlayer
+  - GetConnectedToPlayer
+  - RPC_Save
+  - RPC_ForceReleaseVictim
+  - RPC_SetSavedState
+  - RPC_VictimEnteredSaveZone
+  - RPC_VictimLeftSaveZone
+  - RPC_RequestRestart
+  - RPC_PrepareForRestart
+  - SetKinematicState
+  - PlayGunshotSound
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

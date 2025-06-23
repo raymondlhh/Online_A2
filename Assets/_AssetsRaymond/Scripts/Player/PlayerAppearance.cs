@@ -64,15 +64,15 @@ public class PlayerAppearance : MonoBehaviourPun
         {
             case 0: 
                 ChangeAppearance(JadenMesh, JadenDecoration); 
-                Debug.Log("PlayerAppearanceController: Applied Jaden appearance");
+                //Debug.Log("PlayerAppearanceController: Applied Jaden appearance");
                 break;
             case 1: 
                 ChangeAppearance(AliceMesh, AliceDecoration); 
-                Debug.Log("PlayerAppearanceController: Applied Alice appearance");
+                //Debug.Log("PlayerAppearanceController: Applied Alice appearance");
                 break;
             case 2: 
                 ChangeAppearance(JackMesh, JackDecoration);  
-                Debug.Log("PlayerAppearanceController: Applied Jack appearance");
+                //Debug.Log("PlayerAppearanceController: Applied Jack appearance");
                 break;
             default:
                 Debug.LogError($"PlayerAppearanceController: Invalid skinIndex: {skinIndex}");
@@ -85,7 +85,7 @@ public class PlayerAppearance : MonoBehaviourPun
         if (bodyRenderer != null)
         {
             bodyRenderer.sharedMesh = newMesh;
-            Debug.Log($"PlayerAppearanceController: Changed mesh to {newMesh.name}");
+            //Debug.Log($"PlayerAppearanceController: Changed mesh to {newMesh.name}");
         }
         else
         {
@@ -100,7 +100,7 @@ public class PlayerAppearance : MonoBehaviourPun
         if (activeDecoration != null) 
         {
             activeDecoration.SetActive(true);
-            Debug.Log($"PlayerAppearanceController: Activated decoration {activeDecoration.name}");
+            //Debug.Log($"PlayerAppearanceController: Activated decoration {activeDecoration.name}");
         }
         else
         {

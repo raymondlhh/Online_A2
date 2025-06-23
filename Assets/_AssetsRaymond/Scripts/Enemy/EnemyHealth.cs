@@ -20,7 +20,7 @@ public class EnemyHealth : MonoBehaviour
     private Animator animator;
     private NavMeshAgent navMeshAgent;
     private EnemyMovement enemyMovement;
-    private EnemyShoot enemyShoot;
+    private EnemyAttack enemyShoot;
     private Collider mainCollider;
     private PhotonView photonView;
     private Camera mainCamera;
@@ -30,7 +30,7 @@ public class EnemyHealth : MonoBehaviour
         animator = GetComponent<Animator>();
         navMeshAgent = GetComponent<NavMeshAgent>();
         enemyMovement = GetComponent<EnemyMovement>();
-        enemyShoot = GetComponent<EnemyShoot>();
+        enemyShoot = GetComponent<EnemyAttack>();
         mainCollider = GetComponent<Collider>();
         photonView = GetComponent<PhotonView>();
     }
@@ -39,17 +39,25 @@ public class EnemyHealth : MonoBehaviour
     void Start()
     {
         health = startHealth;
-        mainCamera = Camera.main; // Find the main camera
+        // The camera will be found in LateUpdate to ensure it's ready.
         UpdateHealthBar(); // Set initial health bar state
     }
 
     void LateUpdate()
     {
         // Make the UI always face the player's camera
-        if (enemyUICanvas != null && enemyUICanvas.activeSelf && mainCamera != null)
+        if (enemyUICanvas != null && enemyUICanvas.activeSelf)
         {
-            enemyUICanvas.transform.LookAt(transform.position + mainCamera.transform.rotation * Vector3.forward,
-                mainCamera.transform.rotation * Vector3.up);
+            if (mainCamera == null)
+            {
+                mainCamera = Camera.main;
+            }
+
+            if (mainCamera != null)
+            {
+                enemyUICanvas.transform.LookAt(transform.position + mainCamera.transform.rotation * Vector3.forward,
+                    mainCamera.transform.rotation * Vector3.up);
+            }
         }
     }
 
@@ -105,8 +113,26 @@ public class EnemyHealth : MonoBehaviour
     IEnumerator DestroyAfterAnimation()
     {
         // Wait for the length of the death animation
-        // You might need to adjust this time based on your actual animation length
-        yield return new WaitForSeconds(3f);
+        if (animator != null)
+        {
+            // Find the "Death" clip in the animator controller
+            AnimationClip[] clips = animator.runtimeAnimatorController.animationClips;
+            float deathClipLength = 3f; // Default value
+            foreach (AnimationClip clip in clips)
+            {
+                if (clip.name == "Death") // Make sure your death animation clip is named "Death"
+                {
+                    deathClipLength = clip.length;
+                    break;
+                }
+            }
+            yield return new WaitForSeconds(deathClipLength);
+        }
+        else
+        {
+            // Fallback if no animator is found
+            yield return new WaitForSeconds(2.9f);
+        }
         
         // Only the master client should destroy networked objects
         if (PhotonNetwork.IsMasterClient)

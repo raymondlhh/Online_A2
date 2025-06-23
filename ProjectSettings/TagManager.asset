@@ -7,6 +7,8 @@ TagManager:
   - DeadMark
   - Door
   - Enemy
+  - Victim
+  - SaveZone
   layers:
   - Default
   - TransparentFX
@@ -16,7 +18,7 @@ TagManager:
   - UI
   - DeadMark
   - Player
-  - 
+  - CloakedPlayer
   - 
   - 
   - 

@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Photon.Realtime;
+using Photon.Pun;
 
 public class PlayerMovement : MonoBehaviour
 {
@@ -68,13 +70,8 @@ public class PlayerMovement : MonoBehaviour
             isGrounded = Physics.Raycast(groundCheck.position, Vector3.down, groundCheckDistance);
         }
 
-        // Handle cursor lock toggle
-        if (Input.GetKeyDown(KeyCode.Escape))
-        {
-            isCursorLocked = !isCursorLocked;
-            Cursor.lockState = isCursorLocked ? CursorLockMode.Locked : CursorLockMode.None;
-            Cursor.visible = !isCursorLocked;
-        }
+        // The logic for toggling cursor lock with Escape has been moved to the PauseManager
+        // to prevent input conflicts.
 
         if (isCursorLocked && CanLook)
         {
@@ -183,5 +180,14 @@ public class PlayerMovement : MonoBehaviour
         rb.useGravity = false;
         yield return new WaitForSeconds(duration);
         DeactivateSlowFall();
+    }
+
+    [Photon.Pun.PunRPC]
+    public void SetKinematicState(bool state)
+    {
+        if (rb != null)
+        {
+            rb.isKinematic = state;
+        }
     }
 }

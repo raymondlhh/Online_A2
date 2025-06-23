@@ -5,7 +5,7 @@ using TMPro;
 using Photon.Pun;
 using ExitGames.Client.Photon;
 
-public class PlayerShoot : MonoBehaviourPunCallbacks
+public class PlayerAttack : MonoBehaviourPunCallbacks
 {
     public Camera FPS_Camera;
     public GameObject hitEffectPrefab;
@@ -209,7 +209,7 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
             // Handle reloading with R key
             if (Input.GetKeyDown(KeyCode.R) && !isReloading && currentAmmoPerWeapon[currentWeaponIndex] < maxAmmoPerWeapon[currentWeaponIndex])
             {
-                reloadCoroutine = StartCoroutine(Reload());
+                StartCoroutine(Reload());
             }
         }
     }
@@ -225,6 +225,9 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
         // Update UI immediately after decreasing ammo
         UpdateAmmoUI();
 
+        // Play gunshot sound for everyone
+        photonView.RPC(nameof(PlayGunshotSound), RpcTarget.All);
+
         RaycastHit _hit;
         Ray ray = FPS_Camera.ViewportPointToRay(new Vector3(0.5f, 0.5f));
 
@@ -232,10 +235,15 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
         {
             photonView.RPC("CreateHitEffect", RpcTarget.All, _hit.point);
 
-            // if(_hit.collider.gameObject.CompareTag("Player") && !_hit.collider.gameObject.GetComponent<PhotonView>().IsMine)
-            // {
-            //     _hit.collider.gameObject.GetComponent<PhotonView>().RPC("TakeDamage", RpcTarget.AllBuffered, damage);
-            // }
+            // Damage Enemy
+            if (_hit.collider.gameObject.CompareTag("Enemy"))
+            {
+                EnemyHealth enemyHealth = _hit.collider.gameObject.GetComponent<EnemyHealth>();
+                if (enemyHealth != null)
+                {
+                    enemyHealth.GetComponent<PhotonView>().RPC("TakeDamage", RpcTarget.All, damage);
+                }
+            }
         }
 
         // Sync ammo across network
@@ -266,10 +274,15 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
         {
             photonView.RPC("CreateHitEffect", RpcTarget.All, _hit.point);
 
-            // if(_hit.collider.gameObject.CompareTag("Player") && !_hit.collider.gameObject.GetComponent<PhotonView>().IsMine)
-            // {
-            //     _hit.collider.gameObject.GetComponent<PhotonView>().RPC("TakeDamage", RpcTarget.AllBuffered, swordDamage);
-            // }
+            // Damage Enemy
+            if (_hit.collider.gameObject.CompareTag("Enemy"))
+            {
+                EnemyHealth enemyHealth = _hit.collider.gameObject.GetComponent<EnemyHealth>();
+                if (enemyHealth != null)
+                {
+                    enemyHealth.GetComponent<PhotonView>().RPC("TakeDamage", RpcTarget.All, swordDamage);
+                }
+            }
         }
         
         yield return new WaitForSeconds(swordAttackRate * 0.9f); 
@@ -500,6 +513,15 @@ public class PlayerShoot : MonoBehaviourPunCallbacks
         else
         {
             ApplyWeaponVisual(currentWeaponIndex);
+        }
+    }
+
+    [PunRPC]
+    void PlayGunshotSound()
+    {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlaySFX("Gun Shot");
         }
     }
 }

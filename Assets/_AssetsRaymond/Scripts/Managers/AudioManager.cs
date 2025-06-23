@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class AudioManager : MonoBehaviour
 {
@@ -24,22 +25,59 @@ public class AudioManager : MonoBehaviour
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
+            return;
         }
         else
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
         }
+
+        Debug.Log("<color=cyan>AudioManager:</color> Awake() finished. Initializing sources and dictionaries.");
+        InitializeAudioSources();
+        InitializeSoundDictionaries();
+        
+        // Subscribe to the scene loaded event
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        Debug.Log("<color=cyan>AudioManager:</color> Subscribed to sceneLoaded event.");
+    }
+
+    private void OnDestroy()
+    {
+        // Unsubscribe to prevent memory leaks when the object is destroyed
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        Debug.Log("<color=cyan>AudioManager:</color> Unsubscribed from sceneLoaded event.");
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        string sceneName = scene.name;
+        Debug.Log($"<color=cyan>AudioManager:</color> New scene loaded: '{sceneName}'");
+
+        if (sceneName == "MainMenuScene" || sceneName == "LobbyScene")
+        {
+            Debug.Log($"<color=cyan>AudioManager:</color> Scene is a menu/lobby. Attempting to play 'Main Menu & Lobby Scene' BGM and set volume to 0.5.");
+            PlayBGM("Main Menu & Lobby Scene");
+            SetBGMVolume(0.5f);
+        }
+        // The GameScene BGM is now handled entirely by the GameManager.
+        // This OnSceneLoaded method in AudioManager is now only responsible for menu/lobby music.
     }
 
     void Start()
     {
-        InitializeAudioSources();
-        InitializeSoundDictionaries();
+        // Start logic can be placed here if needed in the future
     }
 
     void InitializeAudioSources()
     {
+        // Ensure this persistent object has the one and only Audio Listener
+        if (GetComponent<AudioListener>() == null)
+        {
+            gameObject.AddComponent<AudioListener>();
+            Debug.Log("<color=cyan>AudioManager:</color> Added central AudioListener to self.");
+        }
+
         // Create SFX AudioSource if not assigned
         if (sfxSource == null)
         {
@@ -94,25 +132,36 @@ public class AudioManager : MonoBehaviour
 
     public void PlayBGM(string soundName)
     {
+        Debug.Log($"<color=green>AudioManager.PlayBGM():</color> Received request to play '{soundName}'.");
         if (bgmDictionary.ContainsKey(soundName))
         {
             Sound sound = bgmDictionary[soundName];
+            Debug.Log($"<color=green>AudioManager.PlayBGM():</color> Sound '{soundName}' found. Playing clip '{sound.clip.name}'.");
             
-            // Stop current BGM if playing
-            if (bgmSource.isPlaying)
+            // Stop current BGM if playing and it's a different clip
+            if (bgmSource.isPlaying && bgmSource.clip != sound.clip)
             {
                 bgmSource.Stop();
             }
             
-            bgmSource.clip = sound.clip;
-            bgmSource.volume = sound.volume;
-            bgmSource.pitch = sound.pitch;
-            bgmSource.loop = sound.loop;
-            bgmSource.Play();
+            // Only play if the source is not already playing this exact clip
+            if (bgmSource.clip != sound.clip || !bgmSource.isPlaying)
+            {
+                bgmSource.clip = sound.clip;
+                bgmSource.volume = sound.volume;
+                bgmSource.pitch = sound.pitch;
+                bgmSource.loop = sound.loop;
+                bgmSource.Play();
+                Debug.Log($"<color=green>AudioManager.PlayBGM():</color> Music started.");
+            }
+            else
+            {
+                Debug.Log($"<color=yellow>AudioManager.PlayBGM():</color> Music '{soundName}' is already playing. No action taken.");
+            }
         }
         else
         {
-            Debug.LogWarning($"BGM sound '{soundName}' not found!");
+            Debug.LogWarning($"<color=red>AudioManager.PlayBGM():</color> BGM sound '{soundName}' not found in dictionary! Check for typos in the inspector or code.");
         }
     }
 
@@ -131,7 +180,15 @@ public class AudioManager : MonoBehaviour
 
     public void SetBGMVolume(float volume)
     {
-        bgmSource.volume = Mathf.Clamp01(volume);
+        float newVolume = Mathf.Clamp01(volume);
+        bgmSource.volume = newVolume;
+        Debug.Log($"<color=blue>AudioManager:</color> BGM volume set to {newVolume}");
+    }
+
+    public void ToggleMasterMute()
+    {
+        AudioListener.pause = !AudioListener.pause;
+        Debug.Log($"<color=magenta>AudioManager:</color> Master mute toggled. AudioListener.pause is now {AudioListener.pause}");
     }
 
     // Update is called once per frame

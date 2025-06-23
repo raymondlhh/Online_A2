@@ -68,8 +68,17 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
     #region UI Callbacks
 
+    private void PlayButtonClickSound()
+    {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlaySFX("Button Pressed");
+        }
+    }
+
     public void OnLoginButtonClicked()
     {
+        PlayButtonClickSound();
         string playerName = playerNameInput.text;
         if (!string.IsNullOrEmpty(playerName))
         {
@@ -85,6 +94,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
     public void OnCreateRoomButtonCliked()
     {
+        PlayButtonClickSound();
         // Validate and get room name
         string roomName = roomNameInputField.text;
         if (string.IsNullOrEmpty(roomName))
@@ -128,11 +138,13 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
     public void onCancelButtonClicked()
     {
+        PlayButtonClickSound();
         ActivatePanel(GameOptions_UI_Panel.name);
     }
 
     public void OnShowRoomListButtonClicked()
     {
+        PlayButtonClickSound();
         if (!PhotonNetwork.InLobby)
         {
             PhotonNetwork.JoinLobby();
@@ -143,6 +155,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
     public void OnBackButtonClicked()
     {
+        PlayButtonClickSound();
         if(PhotonNetwork.InLobby)
         {
             PhotonNetwork.LeaveLobby();
@@ -151,16 +164,19 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     }
     public void OnLeaveGameButtonClicked()
     {
+        PlayButtonClickSound();
         PhotonNetwork.LeaveRoom();
     }
     public void OnJoinRandomRoomButtonClicked()
     {
+        PlayButtonClickSound();
         ActivatePanel(JoinRandomRoom_UI_Panel.name);
         PhotonNetwork.JoinRandomRoom();
     }
 
     public void OnStartGameButtonClicked()
     {
+        PlayButtonClickSound();
         if (PhotonNetwork.IsMasterClient)
         {
             ActivatePanel(LoadingPanel.name);
@@ -327,6 +343,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
     void OnJoinRoomButtonClicked(string _roomName)
     {
+        PlayButtonClickSound();
         if (PhotonNetwork.InLobby)
         {
             PhotonNetwork.LeaveLobby();

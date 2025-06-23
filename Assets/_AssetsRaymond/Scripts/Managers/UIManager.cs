@@ -24,10 +24,12 @@ public class UIManager : MonoBehaviourPunCallbacks
     public GameObject countdownObject;
     public TextMeshProUGUI countdownText; // Assign to the "Time" child in your Countdown object
 
+    [Header("In-Game UI")]
+
     // Character keys for Photon room properties
-    const string JADEN_KEY = "JadenChosen";
-    const string ALICE_KEY = "AliceChosen";
-    const string JACK_KEY = "JackChosen";
+    public const string JADEN_KEY = "JadenChosen";
+    public const string ALICE_KEY = "AliceChosen";
+    public const string JACK_KEY = "JackChosen";
 
     private PlayerAppearance appearance;
     private bool countdownStarted = false;
@@ -69,6 +71,11 @@ public class UIManager : MonoBehaviourPunCallbacks
 
     void OnSelectCharacter(string key)
     {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlaySFX("Button Pressed");
+        }
+        
         if (!IsCharacterTaken(key) && !LocalPlayerHasChosenCharacter())
         {
             ExitGames.Client.Photon.Hashtable props = new ExitGames.Client.Photon.Hashtable();
@@ -87,6 +94,11 @@ public class UIManager : MonoBehaviourPunCallbacks
 
     void OnCancelCharacter(string key)
     {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlaySFX("Button Pressed");
+        }
+
         if (IsCharacterTakenByMe(key))
         {
             ExitGames.Client.Photon.Hashtable props = new ExitGames.Client.Photon.Hashtable();
@@ -210,7 +222,7 @@ public class UIManager : MonoBehaviourPunCallbacks
         if (localPlayerMovement != null)
             localPlayerMovement.enabled = false;
 
-        var localPlayerShoot = FindObjectsOfType<PlayerShoot>().FirstOrDefault(s => s.GetComponent<Photon.Pun.PhotonView>()?.IsMine == true);
+        var localPlayerShoot = FindObjectsOfType<PlayerAttack>().FirstOrDefault(s => s.GetComponent<Photon.Pun.PhotonView>()?.IsMine == true);
         if (localPlayerShoot != null)
             localPlayerShoot.enabled = false;
     }
@@ -221,7 +233,7 @@ public class UIManager : MonoBehaviourPunCallbacks
         if (localPlayerMovement != null)
             localPlayerMovement.enabled = true;
 
-        var localPlayerShoot = FindObjectsOfType<PlayerShoot>().FirstOrDefault(s => s.GetComponent<Photon.Pun.PhotonView>()?.IsMine == true);
+        var localPlayerShoot = FindObjectsOfType<PlayerAttack>().FirstOrDefault(s => s.GetComponent<Photon.Pun.PhotonView>()?.IsMine == true);
         if (localPlayerShoot != null)
             localPlayerShoot.enabled = true;
     }

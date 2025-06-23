@@ -12,10 +12,11 @@ public class EnemyMovement : MonoBehaviour
     [Range(0, 360)]
     public float detectionAngle = 90f;
     public LayerMask playerLayerMask;
+    public float stoppingDistance = 5f;
 
     private NavMeshAgent navMeshAgent;
     private Animator animator;
-    private Transform targetPlayer;
+    public Transform targetPlayer { get; private set; }
     private Transform[] patrolPoints;
     private int currentPatrolIndex = 0;
 
@@ -82,11 +83,13 @@ public class EnemyMovement : MonoBehaviour
         if (targetPlayer != null)
         {
             // Chase the player
+            navMeshAgent.stoppingDistance = stoppingDistance;
             navMeshAgent.SetDestination(targetPlayer.position);
         }
         else
         {
             // Patrol
+            navMeshAgent.stoppingDistance = 0f;
             if (!navMeshAgent.pathPending && navMeshAgent.remainingDistance < 0.5f)
             {
                 GoToNextPatrolPoint();
@@ -100,13 +103,21 @@ public class EnemyMovement : MonoBehaviour
 
         // Pick a new random patrol point that is different from the current one
         int newPatrolIndex = currentPatrolIndex;
-        while (newPatrolIndex == currentPatrolIndex)
+        // Safety for single patrol point to avoid infinite loop.
+        if (patrolPoints.Length > 1) 
         {
-            newPatrolIndex = Random.Range(0, patrolPoints.Length);
+            while (newPatrolIndex == currentPatrolIndex)
+            {
+                newPatrolIndex = Random.Range(0, patrolPoints.Length);
+            }
         }
         currentPatrolIndex = newPatrolIndex;
         
-        navMeshAgent.destination = patrolPoints[currentPatrolIndex].position;
+        // Add a null check here to prevent errors during scene transitions.
+        if (patrolPoints[currentPatrolIndex] != null)
+        {
+            navMeshAgent.destination = patrolPoints[currentPatrolIndex].position;
+        }
     }
 
     void UpdateAnimator()
@@ -128,6 +139,13 @@ public class EnemyMovement : MonoBehaviour
         // The IsRunning bool is still useful for transitions between idle and moving states
         bool isRunning = velocity.sqrMagnitude > 0.1f;
         animator.SetBool("IsRunning", isRunning);
+    }
+
+    public bool AgentHasStopped()
+    {
+        // Check if the agent is on the NavMesh, has reached its stopping distance, and has a very low velocity.
+        if (!navMeshAgent.isOnNavMesh) return false;
+        return !navMeshAgent.pathPending && navMeshAgent.remainingDistance <= navMeshAgent.stoppingDistance && navMeshAgent.velocity.sqrMagnitude < 0.1f;
     }
 
     private void OnDrawGizmosSelected()

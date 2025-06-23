@@ -24,11 +24,12 @@ public class PlayerSkillDetails : MonoBehaviour
 
     [Header("Skill-Specific UI")]
     public GameObject bloodLockUI;
+    public GameObject ghostCloakUI;
     public TextMeshProUGUI durationText;
     public GameObject shadowSwapFXPrefab;
 
     private float currentCooldown = 0f;
-    private PlayerShoot playerShoot;
+    private PlayerAttack playerShoot;
     private PlayerHealth playerHealth;
     private PlayerMovement playerMovementController;
     private PlayerVisibility playerVisibilityController;
@@ -59,12 +60,17 @@ public class PlayerSkillDetails : MonoBehaviour
             cooldownText.gameObject.SetActive(false);
         }
 
+        if (ghostCloakUI != null)
+        {
+            ghostCloakUI.SetActive(false);
+        }
+
         if (durationText != null)
         {
             durationText.gameObject.SetActive(false);
         }
 
-        playerShoot = GetComponentInParent<PlayerShoot>();
+        playerShoot = GetComponentInParent<PlayerAttack>();
         playerHealth = GetComponentInParent<PlayerHealth>();
         playerMovementController = GetComponentInParent<PlayerMovement>();
         playerVisibilityController = GetComponentInParent<PlayerVisibility>();
@@ -170,6 +176,16 @@ public class PlayerSkillDetails : MonoBehaviour
             playerMovementController.ActivateSlowFall(skillDuration);
             slowFallActive = true;
             isTimedSkill = true;
+
+            // If a player is connected, apply slow fall to them too
+            if (playerConnector != null && playerConnector.ConnectedPlayerMovement != null)
+            {
+                var connectedPlayerView = playerConnector.ConnectedPlayerMovement.GetComponent<PhotonView>();
+                if (connectedPlayerView != null)
+                {
+                    connectedPlayerView.RPC("SetKinematicState", RpcTarget.All, true);
+                }
+            }
         }
         if (isTimedGhostCloak && playerVisibilityController != null)
         {
@@ -177,27 +193,31 @@ public class PlayerSkillDetails : MonoBehaviour
             isTimedSkill = true;
         }
 
-        bool connectSuccess = false;
         if (isConnectMovementSkill)
         {
             if (playerConnector != null)
             {
-                connectSuccess = playerConnector.TryConnect(skillDuration);
-                if (connectSuccess)
+                var connectResult = playerConnector.TryConnect(skillDuration);
+                
+                if (connectResult == PlayerConnector.ConnectionResult.Success)
                 {
                     isConnectSkillActive = true;
+                    timedSkillUICoroutine = StartCoroutine(HandleTimedSkillUI(skillDuration));
+                    StartCooldown();
                 }
             }
         }
-
-        if (isTimedSkill || (isConnectMovementSkill && connectSuccess))
+        else
         {
-            timedSkillUICoroutine = StartCoroutine(HandleTimedSkillUI(skillDuration));
-        }
+            if (isTimedSkill)
+            {
+                timedSkillUICoroutine = StartCoroutine(HandleTimedSkillUI(skillDuration));
+            }
 
-        if (!isConnectMovementSkill || connectSuccess)
-        {
-            StartCooldown();
+            if (isTimedSkill || isTimedGhostCloak)
+            {
+                StartCooldown();
+            }
         }
     }
 
@@ -270,6 +290,10 @@ public class PlayerSkillDetails : MonoBehaviour
         {
             bloodLockUI.SetActive(true);
         }
+        if (ghostCloakUI != null && isTimedGhostCloak)
+        {
+            ghostCloakUI.SetActive(true);
+        }
         if (durationText != null)
         {
             durationText.gameObject.SetActive(true);
@@ -295,6 +319,10 @@ public class PlayerSkillDetails : MonoBehaviour
         {
             bloodLockUI.SetActive(false);
         }
+        if (ghostCloakUI != null && isTimedGhostCloak)
+        {
+            ghostCloakUI.SetActive(false);
+        }
         if (durationText != null)
         {
             durationText.gameObject.SetActive(false);
@@ -302,8 +330,37 @@ public class PlayerSkillDetails : MonoBehaviour
         
         if (isTimedSlowFall)
         {
+            // If a player was connected, reset their physics
+            if (playerConnector != null && playerConnector.ConnectedPlayerMovement != null)
+            {
+                var connectedPlayerView = playerConnector.ConnectedPlayerMovement.GetComponent<PhotonView>();
+                if (connectedPlayerView != null)
+                {
+                    connectedPlayerView.RPC("SetKinematicState", RpcTarget.All, false);
+                }
+            }
             slowFallActive = false;
         }
         timedSkillUICoroutine = null;
+    }
+
+    /// <summary>
+    /// Called by PlayerConnector when the victim connection is broken externally (e.g. victim saved).
+    /// </summary>
+    public void CancelConnectSkillUI()
+    {
+        if (isConnectSkillActive)
+        {
+            isConnectSkillActive = false;
+            if (timedSkillUICoroutine != null)
+            {
+                StopCoroutine(timedSkillUICoroutine);
+                timedSkillUICoroutine = null;
+            }
+            if (durationText != null)
+            {
+                durationText.gameObject.SetActive(false);
+            }
+        }
     }
 }
