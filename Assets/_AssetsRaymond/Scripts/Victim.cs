@@ -17,6 +17,11 @@ public class Victim : MonoBehaviour
     private PhotonView photonView;
     private int connectedPlayerViewID = 0;
     private Rigidbody rb;
+    
+    // Save zone detection
+    private bool wasInSaveZone = false;
+    private Collider[] saveZoneColliders;
+    private bool saveZoneRPCInProgress = false; // Prevent duplicate RPC calls
 
     public bool IsSaved()
     {
@@ -48,54 +53,119 @@ public class Victim : MonoBehaviour
         {
             safeMark.SetActive(false);
         }
+        
+        // Find all save zone colliders in the scene
+        GameObject[] saveZones = GameObject.FindGameObjectsWithTag("SaveZone");
+        saveZoneColliders = new Collider[saveZones.Length];
+        for (int i = 0; i < saveZones.Length; i++)
+        {
+            saveZoneColliders[i] = saveZones[i].GetComponent<Collider>();
+        }
+        
+        // Start checking for save zone entry/exit
+        StartCoroutine(CheckSaveZoneStatus());
     }
     
-    private void OnTriggerEnter(Collider other)
+    private IEnumerator CheckSaveZoneStatus()
     {
-        if (other.CompareTag("SaveZone") && !isSaved)
+        while (true)
         {
-            // Tell the Master Client a victim has entered the save zone.
-            photonView.RPC(nameof(RPC_VictimEnteredSaveZone), RpcTarget.MasterClient);
+            bool currentlyInSaveZone = IsInSaveZone();
+            
+            // Check for entry
+            if (currentlyInSaveZone && !wasInSaveZone && !isSaved && !saveZoneRPCInProgress)
+            {
+                saveZoneRPCInProgress = true;
+                // Tell the Master Client a victim has entered the save zone.
+                photonView.RPC(nameof(RPC_VictimEnteredSaveZone), RpcTarget.MasterClient);
+            }
+            // Check for exit
+            else if (!currentlyInSaveZone && wasInSaveZone && isSaved && !saveZoneRPCInProgress)
+            {
+                saveZoneRPCInProgress = true;
+                // Tell the Master Client a victim has left the save zone.
+                photonView.RPC(nameof(RPC_VictimLeftSaveZone), RpcTarget.MasterClient);
+            }
+            
+            wasInSaveZone = currentlyInSaveZone;
+            yield return new WaitForSeconds(0.2f); // Check every 0.2 seconds
         }
     }
-
-    private void OnTriggerExit(Collider other)
+    
+    private bool IsInSaveZone()
     {
-        if (other.CompareTag("SaveZone") && isSaved)
+        if (saveZoneColliders == null) return false;
+        
+        foreach (Collider saveZoneCollider in saveZoneColliders)
         {
-            // Tell the Master Client a victim has left the save zone.
-            photonView.RPC(nameof(RPC_VictimLeftSaveZone), RpcTarget.MasterClient);
+            if (saveZoneCollider != null && saveZoneCollider.bounds.Contains(transform.position))
+            {
+                return true;
+            }
         }
+        return false;
     }
 
     [PunRPC]
     private void RPC_VictimEnteredSaveZone()
     {
-        if (isSaved) return;
+        if (isSaved) 
+        {
+            saveZoneRPCInProgress = false;
+            return;
+        }
+        
+        Debug.Log($"<color=green>Victim:</color> Entered save zone. Connected to player: {connectedPlayerViewID}");
         
         // This runs on the Master Client to update the authoritative count.
         GameManager.Instance.UpdateVictimsSavedCount(1);
 
         // Broadcast to all clients that this victim is saved and should detach.
         photonView.RPC(nameof(RPC_SetSavedState), RpcTarget.All, true);
+        
+        // Notify the connected player to release this victim
+        if (connectedPlayerViewID != 0)
+        {
+            PhotonView playerView = PhotonView.Find(connectedPlayerViewID);
+            if (playerView != null)
+            {
+                PlayerConnector connector = playerView.GetComponent<PlayerConnector>();
+                if (connector != null)
+                {
+                    playerView.RPC("RPC_ForceReleaseVictim", RpcTarget.All);
+                }
+            }
+        }
+        
+        saveZoneRPCInProgress = false;
     }
 
     [PunRPC]
     private void RPC_VictimLeftSaveZone()
     {
-        if (!isSaved) return;
+        if (!isSaved) 
+        {
+            saveZoneRPCInProgress = false;
+            return;
+        }
+
+        Debug.Log($"<color=orange>Victim:</color> Left save zone.");
 
         // This runs on the Master Client.
         GameManager.Instance.UpdateVictimsSavedCount(-1);
 
         // Broadcast to all clients that this victim is no longer saved.
         photonView.RPC(nameof(RPC_SetSavedState), RpcTarget.All, false);
+        
+        saveZoneRPCInProgress = false;
     }
 
     [PunRPC]
     private void RPC_SetSavedState(bool state)
     {
         isSaved = state;
+        
+        Debug.Log($"<color=blue>Victim:</color> Saved state changed to: {state}");
 
         // Toggle the danger/safe marks based on the saved state.
         if (dangerMark != null)
@@ -184,5 +254,15 @@ public class Victim : MonoBehaviour
         }
 
         DetachFromPlayer();
+    }
+    
+    private void OnDestroy()
+    {
+        Debug.Log($"<color=red>Victim:</color> Being destroyed! Saved: {isSaved}, Connected: {isConnected}, ConnectedPlayer: {connectedPlayerViewID}");
+    }
+    
+    private void OnDisable()
+    {
+        Debug.Log($"<color=red>Victim:</color> Being disabled! Saved: {isSaved}, Connected: {isConnected}, ConnectedPlayer: {connectedPlayerViewID}");
     }
 } 

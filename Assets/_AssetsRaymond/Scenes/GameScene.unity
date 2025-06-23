@@ -418,7 +418,7 @@ MonoBehaviour:
   - {fileID: 556019660995079385}
   - {fileID: 913584569}
   - {fileID: 1969921814}
-  gameDuration: 900
+  gameDuration: 720
   isTesting: 0
   spawnerVisuals:
   - {fileID: 3222773345796415869}
@@ -471,6 +471,8 @@ MonoBehaviour:
   - {fileID: 1074082298}
   - {fileID: 298963339}
   - {fileID: 1042049213}
+  - {fileID: 2089850838}
+  - {fileID: 194332324}
 --- !u!1 &112519213
 GameObject:
   m_ObjectHideFlags: 0
