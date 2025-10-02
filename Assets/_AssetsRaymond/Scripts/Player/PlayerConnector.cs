@@ -15,6 +15,10 @@ public class PlayerConnector : MonoBehaviourPunCallbacks
     public GameObject connectedUI;
     public TextMeshProUGUI connectedDurationText;
     
+    [Header("Victim Connection UI")]
+    public GameObject victimConnectedUI;
+    public TextMeshProUGUI victimConnectedDurationText;
+    
     private Camera fpsCamera;
     private PlayerMovement movementController;
     private PlayerSkillDetails[] skillDetails;
@@ -22,6 +26,7 @@ public class PlayerConnector : MonoBehaviourPunCallbacks
     private bool isAttached = false;
     private Transform attachTarget; 
     private Coroutine connectionCoroutine;
+    private Coroutine victimConnectionCoroutine;
     private PhotonView connectedPlayerView;
     private Victim connectedVictim;
     public PlayerMovement ConnectedPlayerMovement { get; private set; }
@@ -61,6 +66,15 @@ public class PlayerConnector : MonoBehaviourPunCallbacks
                 // Connect victim to player
                 connectedVictim = victim;
                 ConnectedPlayerMovement = null; // Ensure we're not tracking a player
+                
+                // Show victim connection UI and start duration display
+                if (photonView.IsMine)
+                {
+                    if (victimConnectedUI != null) victimConnectedUI.SetActive(true);
+                    if (victimConnectionCoroutine != null) StopCoroutine(victimConnectionCoroutine);
+                    victimConnectionCoroutine = StartCoroutine(VictimConnectionDurationDisplay(duration));
+                }
+                
                 victim.GetComponent<PhotonView>().RPC("GetConnectedToPlayer", RpcTarget.All, photonView.ViewID, duration);
                 return ConnectionResult.Success;
             }
@@ -116,6 +130,18 @@ public class PlayerConnector : MonoBehaviourPunCallbacks
         if (connectedVictim != null)
         {
             connectedVictim.GetComponent<PhotonView>().RPC("ForceDetachFromPlayer", RpcTarget.All);
+            
+            // Hide victim connection UI
+            if (photonView.IsMine)
+            {
+                if (victimConnectedUI != null) victimConnectedUI.SetActive(false);
+                if (victimConnectionCoroutine != null)
+                {
+                    StopCoroutine(victimConnectionCoroutine);
+                    victimConnectionCoroutine = null;
+                }
+            }
+            
             connectedVictim = null;
         }
     }
@@ -158,6 +184,14 @@ public class PlayerConnector : MonoBehaviourPunCallbacks
         // It runs on the Player who was connected to the victim.
         if (photonView.IsMine)
         {
+            // Hide victim connection UI
+            if (victimConnectedUI != null) victimConnectedUI.SetActive(false);
+            if (victimConnectionCoroutine != null)
+            {
+                StopCoroutine(victimConnectionCoroutine);
+                victimConnectionCoroutine = null;
+            }
+            
             connectedVictim = null;
     
             // Find the connect skill and cancel its active UI state.
@@ -200,5 +234,26 @@ public class PlayerConnector : MonoBehaviourPunCallbacks
         }
 
         Detach();
+    }
+
+    private IEnumerator VictimConnectionDurationDisplay(float duration)
+    {
+        float remainingDuration = duration;
+        while (remainingDuration > 0f && connectedVictim != null)
+        {
+            if (victimConnectedDurationText != null)
+            {
+                victimConnectedDurationText.text = $"VICTIM IS BEING CONNECTED: {Mathf.CeilToInt(remainingDuration)}s";
+            }
+            yield return new WaitForSeconds(1f);
+            remainingDuration -= 1f;
+        }
+
+        // Hide UI when connection ends
+        if (photonView.IsMine)
+        {
+            if (victimConnectedUI != null) victimConnectedUI.SetActive(false);
+        }
+        victimConnectionCoroutine = null;
     }
 } 
